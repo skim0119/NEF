@@ -68,38 +68,24 @@ class NengoReservoirComputing:
 
     def prediction(self, steps, dt=0.02):
         predictions = np.zeros((steps, 3))
+        current_state = self.last_state
 
         with self.model:
-            self.input_pred = nengo.Node(size_in=3)
-            nengo.Connection(self.input_pred, self.reservoir,
-                             transform=self.Win, synapse=None)
-
-            self.predicted_output = nengo.Node(size_in=3)
-            nengo.Connection(self.reservoir, self.predicted_output,
-                             function=lambda x: self.Lmodel.predict(x.reshape(1, -1))[0])
-
-            self.prediction_probe = nengo.Probe(self.predicted_output, synapse=0)
+            self.input_predict = nengo.Node(output=lambda t: self.Lmodel.predict(current_state[None,:])[0] if t == dt else [0, 0, 0])
+            nengo.Connection(self.input_predict, self.input, synapse=None)
+            nengo.Connection(self.reservoir, self.input, synapse=0, transform=self.Lmodel.coef_)
+            self.prediction_probe = nengo.Probe(self.input, synapse=None)
 
         with nengo.Simulator(self.model, dt=dt) as sim:
-            for t in range(steps):
-                # Update the input based on the previous prediction
-                if t == 0:
-                    sim.model.params[self.input_pred] = self.Lmodel.predict(self.last_state[None,:])[0]
-                else:
-                    sim.model.params[self.input_pred] = predictions[t - 1]
+            sim.run(steps * dt)
 
-                sim.step()
-                predicted = sim.data[self.prediction_probe][-1]
-                predictions[t] = predicted
-
+        predictions = sim.data[self.prediction_probe]
         return predictions
-
-
 
 
 # Simulation parameters
 T_train = 5000
-T_pred = 1250
+T_pred = 10
 dt = 0.02
 initial_state = np.array([1.0, 1.0, 1.0])
 time = np.arange(0, T_train + T_pred) * dt
