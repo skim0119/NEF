@@ -1,13 +1,12 @@
 import os
 
-from collections import defaultdict
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal as sig
 from scipy.integrate import simpson
 from dataclasses import dataclass, field
 from typing import Optional, Union
+from collections import defaultdict
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
