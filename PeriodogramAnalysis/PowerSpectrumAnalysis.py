@@ -6,7 +6,7 @@ from scipy import signal as sig
 from scipy.fft import rfft, rfftfreq
 from scipy.signal.windows import dpss
 from dataclasses import dataclass, field
-from typing import Optional
+from collections import defaultdict
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
@@ -34,13 +34,12 @@ class SpectrumAnalysis(OperatorMixin):
     convert_db : bool
         If True, convert power spectral density values to decibels (dB).
     """
-    exclude_channels: Optional[list] = field(default_factory=list)
+    exclude_channel_list: list = field(default_factory=list)
     band_display: list = field(default_factory=lambda: [0, 100])
-    win_sec: float = 4
+    window_length_for_welch: float = 4
     frequency_limit: list = field(default_factory=lambda: [0, 100])
     nperseg: int = 2048
     noverlap: int = 1024
-    convert_db: bool = True
 
     tag = "Spectrum_Analysis"
 
@@ -62,48 +61,44 @@ class SpectrumAnalysis(OperatorMixin):
         tuple
             PSD dictionary, excluded channels, number of chunks, band display range, dB conversion flag, spectrogram dictionary, frequency limit.
         """
-        for idx, signal_piece in enumerate(signal):
-            if idx >= 1:
+        psd_dict = defaultdict(dict)
+        spec_dict = defaultdict(dict)
+        for chunk_index, signal_piece in enumerate(signal):
+            if chunk_index > 1:
                 break
+            self.chunk_idx = chunk_index
             self.num_channels = signal_piece.number_of_channels
-            num_of_chunks = idx + 1
 
             # Plot spectrum using different methods
-            psd_dict = self.computing_multi_spectrum(signal_piece, self.exclude_channels, num_of_chunks, self.win_sec, self.convert_db)
+            psd_dict[self.chunk_idx] = self.computing_multi_spectrum(signal_piece)
             # Plot spectrogram
-            spec_dict = self.computing_spectrum(signal_piece, self.exclude_channels, num_of_chunks, self.nperseg, self.noverlap)
+            # spec_dict = self.computing_spectrum(signal_piece, self.exclude_channels, num_of_chunks, self.nperseg, self.noverlap)
 
-        return psd_dict, self.exclude_channels, num_of_chunks, self.band_display, self.convert_db, spec_dict, self.frequency_limit
+        return psd_dict, spec_dict
 
-    def computing_multi_spectrum(self, signal, exclude_channel_list, num_of_chunks, win_sec, dB):
-        win = win_sec * signal.rate
-        psd_dict = {}
+    def computing_multi_spectrum(self, signal):
+        win = self.window_length_for_welch * signal.rate
+        psd_dict = defaultdict(dict)
 
-        for chunk in range(num_of_chunks):
-            if chunk not in psd_dict:
-                psd_dict[chunk] = {}
-            for channel in range(self.num_channels):
-                if channel not in exclude_channel_list:
-                    freqs_per, psd_per = sig.periodogram(signal.data[:, channel], signal.rate)
-                    freqs_welch, psd_welch = sig.welch(signal.data[:, channel], fs=signal.rate, nperseg=win)
-                    psd_mt, freqs_mt = multitaper_psd(signal.data[:, channel], signal.rate)
-                    sharey = False
+        for channel in range(self.num_channels):
+            if channel in self.exclude_channel_list:
+                continue
+            freqs_per, psd_per = sig.periodogram(signal.data[:, channel], signal.rate)
+            freqs_welch, psd_welch = sig.welch(signal.data[:, channel], fs=signal.rate, nperseg=win)
+            psd_mt, freqs_mt = multitaper_psd(signal.data[:, channel], signal.rate)
 
-                    if dB:
-                        psd_per = 10 * np.log10(psd_per)
-                        psd_welch = 10 * np.log10(psd_welch)
-                        psd_mt = 10 * np.log10(psd_mt)
-                        sharey = True
+            psd_per = 10 * np.log10(psd_per)
+            psd_welch = 10 * np.log10(psd_welch)
+            psd_mt = 10 * np.log10(psd_mt)
 
-                    psd_dict[chunk][channel] = {
-                        'freqs_per': freqs_per,
-                        'freqs_welch': freqs_welch,
-                        'freqs_mt': freqs_mt,
-                        'psd_per': psd_per,
-                        'psd_welch': psd_welch,
-                        'psd_mt': psd_mt,
-                        'sharey': sharey
-                    }
+            psd_dict[channel] = {
+                'freqs_per': freqs_per,
+                'freqs_welch': freqs_welch,
+                'freqs_mt': freqs_mt,
+                'psd_per': psd_per,
+                'psd_welch': psd_welch,
+                'psd_mt': psd_mt
+            }
         return psd_dict
 
     def computing_spectrum(self, signal, exclude_channel_list, num_of_chunks, nperseg, noverlap):
@@ -123,75 +118,69 @@ class SpectrumAnalysis(OperatorMixin):
 
     def plot_spectrum_methods(self, output, input, show=False, save_path=None):
         psd_dict = output[0]
-        exclude_channel_list = output[1]
-        num_of_chunks = output[2]
-        band = output[3]
-        dB = output[4]
+        num_of_chunks = self.chunk_idx + 1
 
         for chunk in range(num_of_chunks):
             for channel in range(self.num_channels):
-                if channel not in exclude_channel_list:
+                if channel in self.exclude_channel_list:
+                    continue
+                fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4), sharex=True, sharey=True)
+                sc = 'slategrey'
+                ax1.stem(psd_dict[chunk][channel]['freqs_per'], psd_dict[chunk][channel]['psd_per'], linefmt=sc, basefmt=" ", markerfmt=" ")
+                ax2.stem(psd_dict[chunk][channel]['freqs_welch'], psd_dict[chunk][channel]['psd_welch'], linefmt=sc, basefmt=" ", markerfmt=" ")
+                ax3.stem(psd_dict[chunk][channel]['freqs_mt'], psd_dict[chunk][channel]['psd_mt'], linefmt=sc, basefmt=" ", markerfmt=" ")
+                lc, lw = 'k', 2
+                ax1.plot(psd_dict[chunk][channel]['freqs_per'], psd_dict[chunk][channel]['psd_per'], lw=lw, color=lc)
+                ax2.plot(psd_dict[chunk][channel]['freqs_welch'], psd_dict[chunk][channel]['psd_welch'], lw=lw, color=lc)
+                ax3.plot(psd_dict[chunk][channel]['freqs_mt'], psd_dict[chunk][channel]['psd_mt'], lw=lw, color=lc)
+                ax1.set_xlabel('Frequency (Hz)')
+                ax1.set_ylabel('Decibels (dB / Hz)')
+                ax1.set_title('Periodogram')
+                ax2.set_title('Welch')
+                ax3.set_title('Multitaper')
+                ax1.set_xlim(self.band_display)
 
-                    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4), sharex=True, sharey=psd_dict[chunk][channel]['sharey'])
-                    sc = 'slategrey'
-                    ax1.stem(psd_dict[chunk][channel]['freqs_per'], psd_dict[chunk][channel]['psd_per'], linefmt=sc, basefmt=" ", markerfmt=" ")
-                    ax2.stem(psd_dict[chunk][channel]['freqs_welch'], psd_dict[chunk][channel]['psd_welch'], linefmt=sc, basefmt=" ", markerfmt=" ")
-                    ax3.stem(psd_dict[chunk][channel]['freqs_mt'], psd_dict[chunk][channel]['psd_mt'], linefmt=sc, basefmt=" ", markerfmt=" ")
-                    lc, lw = 'k', 2
-                    ax1.plot(psd_dict[chunk][channel]['freqs_per'], psd_dict[chunk][channel]['psd_per'], lw=lw, color=lc)
-                    ax2.plot(psd_dict[chunk][channel]['freqs_welch'], psd_dict[chunk][channel]['psd_welch'], lw=lw, color=lc)
-                    ax3.plot(psd_dict[chunk][channel]['freqs_mt'], psd_dict[chunk][channel]['psd_mt'], lw=lw, color=lc)
-                    ax1.set_xlabel('Frequency (Hz)')
-                    if not dB:
-                        ax1.set_ylabel('Power spectral density (V^2/Hz)')
-                    else:
-                        ax1.set_ylabel('Decibels (dB / Hz)')
-                    ax1.set_title('Periodogram')
-                    ax2.set_title('Welch')
-                    ax3.set_title('Multitaper')
-                    if band is not None:
-                        ax1.set_xlim(band)
-                    ax1.set_ylim(ymin=0)
-                    ax2.set_ylim(ymin=0)
-                    ax3.set_ylim(ymin=0)
-                    if show:
-                        plt.show()
-                    if save_path is not None:
-                        fig_save_path = os.path.join(save_path, "Analysis_figures")
-                        os.makedirs(fig_save_path, exist_ok=True)
-                        plot_path = os.path.join(fig_save_path, f"Comparison_figure_{channel}.png")
-                        plt.savefig(plot_path, dpi=300)
-                    plt.close()
+                ax1.set_ylim(ymin=0)
+                ax2.set_ylim(ymin=0)
+                ax3.set_ylim(ymin=0)
+                if show:
+                    plt.show()
+                if save_path is not None:
+                    fig_save_path = os.path.join(save_path, "Analysis_figures")
+                    os.makedirs(fig_save_path, exist_ok=True)
+                    plot_path = os.path.join(fig_save_path, f"Comparison_figure_{channel}.png")
+                    plt.savefig(plot_path, dpi=300)
+                plt.close()
 
-    def plot_spectrogram(self, output, input, show=False, save_path=None):
-        exclude_channel_list = output[1]
-        num_of_chunks = output[2]
-        spec_dict = output[5]
-        frequency_limit = output[6]
-        for chunk in range(num_of_chunks):
-            for channel in range(self.num_channels):
-                if channel not in exclude_channel_list:
-                    spectrogram_data = spec_dict[chunk][channel]
-                    frequencies = spectrogram_data['frequencies']
-                    times = spectrogram_data['times']
-                    Sxx = spectrogram_data['Sxx']
-
-                    plt.figure(figsize=(10, 6))
-                    plt.pcolormesh(times, frequencies, 10 * np.log10(Sxx), shading='gouraud')
-                    plt.colorbar(label='Power spectral density (dB/Hz)')
-                    plt.xlabel('Time (s)')
-                    plt.ylabel('Frequency (Hz)')
-                    plt.title(f'Spectrogram for Channel {channel}')
-                    if frequency_limit:
-                        plt.ylim(frequency_limit)
-                    if show:
-                        plt.show()
-                    if save_path is not None:
-                        fig_save_path = os.path.join(save_path, "Analysis_figures")
-                        os.makedirs(fig_save_path, exist_ok=True)
-                        plot_path = os.path.join(fig_save_path, f'Spectrogram_Channel_{channel}.png')
-                        plt.savefig(plot_path, dpi=300)
-                    plt.close()
+    # def plot_spectrogram(self, output, input, show=False, save_path=None):
+    #     num_of_chunks = output[2]
+    #     spec_dict = output[5]
+    #
+    #     for chunk in range(num_of_chunks):
+    #         for channel in range(self.num_channels):
+    #             if channel in self.exclude_channel_list:
+    #                 continue
+    #             spectrogram_data = spec_dict[chunk][channel]
+    #             frequencies = spectrogram_data['frequencies']
+    #             times = spectrogram_data['times']
+    #             Sxx = spectrogram_data['Sxx']
+    #
+    #             plt.figure(figsize=(10, 6))
+    #             plt.pcolormesh(times, frequencies, 10 * np.log10(Sxx), shading='gouraud')
+    #             plt.colorbar(label='Power spectral density (dB/Hz)')
+    #             plt.xlabel('Time (s)')
+    #             plt.ylabel('Frequency (Hz)')
+    #             plt.title(f'Spectrogram for Channel {channel}')
+    #             plt.ylim(self.frequency_limit)
+    #
+    #             if show:
+    #                 plt.show()
+    #             if save_path is not None:
+    #                 fig_save_path = os.path.join(save_path, "Analysis_figures")
+    #                 os.makedirs(fig_save_path, exist_ok=True)
+    #                 plot_path = os.path.join(fig_save_path, f'Spectrogram_Channel_{channel}.png')
+    #                 plt.savefig(plot_path, dpi=300)
+    #             plt.close()
 
 def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, adaptive=True, low_bias=True):
     """

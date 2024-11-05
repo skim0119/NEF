@@ -21,20 +21,19 @@ Periodogram_Analysis = PeriodogramAnalysis(
         band_list=[[0.5, 4]]
     )
 
-# Spectrum_Analysis = SpectrumAnalysis(
-#         exclude_channels=[ch for ch in range(128) if ch not in [3]],
-#         frequency_limit=[0, 10],
-#         win_sec=4,
-#         nperseg = 100,
-#         noverlap= 50,
-#         band_display = [0, 2],
-#         convert_db = False,
-#     )
+Spectrum_Analysis = SpectrumAnalysis(
+        exclude_channel_list=[ch for ch in range(128) if ch not in [3]],
+        frequency_limit=[0, 10],
+        window_length_for_welch=4,
+        nperseg = 100,
+        noverlap= 50,
+        band_display = [0, 2]
+    )
 
 data >> Periodogram_Analysis
-# data >> Spectrum_Analysis
+data >> Spectrum_Analysis
 pipeline1 = Pipeline(Periodogram_Analysis)
-# pipeline2 = Pipeline(Spectrum_Analysis)
-pipeline1.run(working_directory="results/", verbose=True)
-# pipeline2.run(working_directory="results/", verbose=True)
+pipeline2 = Pipeline(Spectrum_Analysis)
+# pipeline1.run(working_directory="results/", verbose=True)
+pipeline2.run(working_directory="results/", verbose=True)
 
