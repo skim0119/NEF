@@ -64,15 +64,13 @@ class SpectrumAnalysis(OperatorMixin):
         psd_dict = defaultdict(dict)
         spec_dict = defaultdict(dict)
         for chunk_index, signal_piece in enumerate(signal):
-            if chunk_index > 1:
-                break
             self.chunk_idx = chunk_index
             self.num_channels = signal_piece.number_of_channels
 
             # Plot spectrum using different methods
-            psd_dict[self.chunk_idx] = self.computing_multi_spectrum(signal_piece)
+            psd_dict[chunk_index] = self.computing_multi_spectrum(signal_piece)
             # Plot spectrogram
-            spec_dict[self.chunk_idx] = self.computing_spectrum(signal_piece)
+            spec_dict[chunk_index] = self.computing_spectrum(signal_piece)
 
         return psd_dict, spec_dict
 
@@ -144,15 +142,13 @@ class SpectrumAnalysis(OperatorMixin):
                 if show:
                     plt.show()
                 if save_path is not None:
-                    fig_save_path = os.path.join(save_path, "Analysis_figures")
-                    os.makedirs(fig_save_path, exist_ok=True)
-                    plot_path = os.path.join(fig_save_path, f"Comparison_figure_{channel}.png")
+                    plot_path = os.path.join(save_path, f"Chunk{chunk}:Comparison_figure_channel:{channel}.png")
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
     def plot_spectrogram(self, output, input, show=False, save_path=None):
-        num_of_chunks = output[2]
-        spec_dict = output[5]
+        num_of_chunks = self.chunk_idx + 1
+        spec_dict = output[1]
 
         for chunk in range(num_of_chunks):
             for channel in range(self.num_channels):
@@ -174,9 +170,7 @@ class SpectrumAnalysis(OperatorMixin):
                 if show:
                     plt.show()
                 if save_path is not None:
-                    fig_save_path = os.path.join(save_path, "Analysis_figures")
-                    os.makedirs(fig_save_path, exist_ok=True)
-                    plot_path = os.path.join(fig_save_path, f'Spectrogram_Channel_{channel}.png')
+                    plot_path = os.path.join(save_path, f'Chunk{chunk}:Spectrogram_Channel_{channel}.png')
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 

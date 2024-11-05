@@ -60,8 +60,8 @@ class PeriodogramAnalysis(OperatorMixin):
             self.num_channels = signal_piece.number_of_channels
 
             # Compute psd_dict and power_dict for welch_periodogram plotting
-            psd_dict[self.chunk_idx] = self.computing_welch_periodogram(signal_piece)
-            power_dict[self.chunk_idx] = self.computing_absolute_and_relative_power(psd_dict[self.chunk_idx])
+            psd_dict[chunk_idx] = self.computing_welch_periodogram(signal_piece)
+            power_dict[chunk_idx] = self.computing_absolute_and_relative_power(psd_dict[chunk_idx])
 
             # Compute band power and their ratio
             self.computing_ratio_and_bandpower(signal_piece, power_dict)
@@ -206,9 +206,7 @@ class PeriodogramAnalysis(OperatorMixin):
                 if show:
                     plt.show()
                 if save_path is not None:
-                    fig_save_path = os.path.join(save_path, "analysis_figures", f"welch_periodogram_of_chunk_{chunk}")
-                    os.makedirs(fig_save_path, exist_ok=True)
-                    plot_path = os.path.join(fig_save_path, f"welch_periodogram_of_channel_{channel}.png")
+                    plot_path = os.path.join(save_path, f"Chunk{chunk}:welch_periodogram_of_channel_{channel}.png")
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
