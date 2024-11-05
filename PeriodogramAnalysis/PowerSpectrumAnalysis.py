@@ -72,7 +72,7 @@ class SpectrumAnalysis(OperatorMixin):
             # Plot spectrum using different methods
             psd_dict[self.chunk_idx] = self.computing_multi_spectrum(signal_piece)
             # Plot spectrogram
-            # spec_dict = self.computing_spectrum(signal_piece, self.exclude_channels, num_of_chunks, self.nperseg, self.noverlap)
+            spec_dict[self.chunk_idx] = self.computing_spectrum(signal_piece)
 
         return psd_dict, spec_dict
 
@@ -101,19 +101,17 @@ class SpectrumAnalysis(OperatorMixin):
             }
         return psd_dict
 
-    def computing_spectrum(self, signal, exclude_channel_list, num_of_chunks, nperseg, noverlap):
-        spec_dict = {}
-        for chunk in range(num_of_chunks):
-            if chunk not in spec_dict:
-                spec_dict[chunk] = {}
-            for channel in range(self.num_channels):
-                if channel not in exclude_channel_list:
-                    frequencies, times, Sxx = sig.spectrogram(signal.data[:, channel], fs=signal.rate, nperseg=nperseg, noverlap=noverlap)
-                    spec_dict[chunk][channel] = {
-                        'frequencies': frequencies,
-                        'times': times,
-                        'Sxx': Sxx
-                    }
+    def computing_spectrum(self, signal):
+        spec_dict = defaultdict(dict)
+        for channel in range(self.num_channels):
+            if channel in self.exclude_channel_list:
+                continue
+            frequencies, times, Sxx = sig.spectrogram(signal.data[:, channel], fs=signal.rate, nperseg=self.nperseg, noverlap=self.noverlap)
+            spec_dict[channel] = {
+                'frequencies': frequencies,
+                'times': times,
+                'Sxx': Sxx
+            }
         return spec_dict
 
     def plot_spectrum_methods(self, output, input, show=False, save_path=None):
@@ -152,35 +150,35 @@ class SpectrumAnalysis(OperatorMixin):
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
-    # def plot_spectrogram(self, output, input, show=False, save_path=None):
-    #     num_of_chunks = output[2]
-    #     spec_dict = output[5]
-    #
-    #     for chunk in range(num_of_chunks):
-    #         for channel in range(self.num_channels):
-    #             if channel in self.exclude_channel_list:
-    #                 continue
-    #             spectrogram_data = spec_dict[chunk][channel]
-    #             frequencies = spectrogram_data['frequencies']
-    #             times = spectrogram_data['times']
-    #             Sxx = spectrogram_data['Sxx']
-    #
-    #             plt.figure(figsize=(10, 6))
-    #             plt.pcolormesh(times, frequencies, 10 * np.log10(Sxx), shading='gouraud')
-    #             plt.colorbar(label='Power spectral density (dB/Hz)')
-    #             plt.xlabel('Time (s)')
-    #             plt.ylabel('Frequency (Hz)')
-    #             plt.title(f'Spectrogram for Channel {channel}')
-    #             plt.ylim(self.frequency_limit)
-    #
-    #             if show:
-    #                 plt.show()
-    #             if save_path is not None:
-    #                 fig_save_path = os.path.join(save_path, "Analysis_figures")
-    #                 os.makedirs(fig_save_path, exist_ok=True)
-    #                 plot_path = os.path.join(fig_save_path, f'Spectrogram_Channel_{channel}.png')
-    #                 plt.savefig(plot_path, dpi=300)
-    #             plt.close()
+    def plot_spectrogram(self, output, input, show=False, save_path=None):
+        num_of_chunks = output[2]
+        spec_dict = output[5]
+
+        for chunk in range(num_of_chunks):
+            for channel in range(self.num_channels):
+                if channel in self.exclude_channel_list:
+                    continue
+                spectrogram_data = spec_dict[chunk][channel]
+                frequencies = spectrogram_data['frequencies']
+                times = spectrogram_data['times']
+                Sxx = spectrogram_data['Sxx']
+
+                plt.figure(figsize=(10, 6))
+                plt.pcolormesh(times, frequencies, 10 * np.log10(Sxx), shading='gouraud')
+                plt.colorbar(label='Power spectral density (dB/Hz)')
+                plt.xlabel('Time (s)')
+                plt.ylabel('Frequency (Hz)')
+                plt.title(f'Spectrogram for Channel {channel}')
+                plt.ylim(self.frequency_limit)
+
+                if show:
+                    plt.show()
+                if save_path is not None:
+                    fig_save_path = os.path.join(save_path, "Analysis_figures")
+                    os.makedirs(fig_save_path, exist_ok=True)
+                    plot_path = os.path.join(fig_save_path, f'Spectrogram_Channel_{channel}.png')
+                    plt.savefig(plot_path, dpi=300)
+                plt.close()
 
 def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, adaptive=True, low_bias=True):
     """
