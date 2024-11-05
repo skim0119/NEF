@@ -12,7 +12,7 @@ from miv.core.operator.wrapper import cache_call
 from miv.typing import SignalType
 from PowerSpectrumAnalysis import SpectrumAnalysis, multitaper_psd
 
-@ dataclass()
+@dataclass
 class PeriodogramAnalysis(OperatorMixin):
     """
        A class to perform Periodogram Analysis using Welch's method and multitaper PSD.
