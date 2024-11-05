@@ -1,39 +1,40 @@
-import os
-import sys
-from dataclasses import dataclass
-
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import scipy.special as sps
-import scipy.signal as sps_sig
-from typing import List
-
-from miv.core.operator import Operator, DataLoader
-from miv.io.openephys import Data, DataManager
+from miv.core.operator import DataLoader
+from miv.io.openephys import DataManager
 from miv.core.pipeline import Pipeline
-from PowerSpectrumAnalysis import PowerSpectrumAnalysis
-from miv.datasets.openephys_sample import load_data
+from PeriodogramAnalysis import PeriodogramAnalysis
+from PowerSpectrumAnalysis import SpectrumAnalysis
 
-save_path = "results/"
-path:str = load_data(progbar_disable=True).data_collection_path
+# save_path = "results/"
+# path:str = load_data(progbar_disable=True).data_collection_path
+
+path: str = "/Users/aia/Downloads/2024-08-25_19-49-12"
+# path: str = "/home1/10197/qxwang/BAKS_test/2024-08-25_19-49-12"
+print('file path:', path)
 
 dataset: DataManager = DataManager(data_collection_path=path)
 data: DataLoader = dataset[0]
 
-bandpower = PowerSpectrumAnalysis(
-        channel=[2, 3],
-        time=[5, 10],
+Periodogram_Analysis = PeriodogramAnalysis(
+        exclude_channels=[ch for ch in range(128) if ch not in [2, 3]],
+        win_sec=4,
+        band=[[0.5, 4], [12, 30]],
+        mark_region = True
+    )
+
+Spectrum_Analysis = SpectrumAnalysis(
+        exclude_channels=[ch for ch in range(128) if ch not in [3]],
         frequency_limit=[0, 10],
         win_sec=4,
-        band=([0.5, 4], [12, 30]),
         nperseg = 100,
         noverlap= 50,
         band_display = [0, 2],
-        db = False,
+        convert_db = False,
     )
 
-data >> bandpower
-pipeline = Pipeline(bandpower)
-pipeline.run(working_directory="results/", verbose=True)
+data >> Periodogram_Analysis
+data >> Spectrum_Analysis
+pipeline1 = Pipeline(Periodogram_Analysis)
+pipeline2 = Pipeline(Spectrum_Analysis)
+# pipeline1.run(working_directory="results/", verbose=True)
+pipeline2.run(working_directory="results/", verbose=True)
 
