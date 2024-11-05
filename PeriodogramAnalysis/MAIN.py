@@ -17,7 +17,8 @@ data: DataLoader = dataset[0]
 
 Periodogram_Analysis = PeriodogramAnalysis(
         exclude_channel_list=[ch for ch in range(128) if ch not in [2, 3]],
-        window_length_for_welch=4
+        window_length_for_welch=4,
+        band_list=[[0.5, 4]]
     )
 
 # Spectrum_Analysis = SpectrumAnalysis(

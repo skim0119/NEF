@@ -61,7 +61,6 @@ class PeriodogramAnalysis(OperatorMixin):
             if chunk_idx > 1:
                 break
             self.chunk_idx = chunk_idx
-            num_of_chunks = self.chunk_idx + 1
             self.num_channels = signal_piece.number_of_channels
 
             # Compute psd_dict and power_dict for welch_periodogram plotting
@@ -69,8 +68,9 @@ class PeriodogramAnalysis(OperatorMixin):
             power_dict[self.chunk_idx] = self.computing_absolute_and_relative_power(psd_dict[self.chunk_idx])
 
             # Compute band power and their ratio
-            # self.computing_ratio_and_bandpower(signal_piece, power_dict, num_of_chunks)
-        return psd_dict, num_of_chunks, power_dict
+            self.computing_ratio_and_bandpower(signal_piece, power_dict)
+
+        return psd_dict, power_dict
 
     def computing_welch_periodogram(self, signal):
         """
@@ -186,8 +186,8 @@ class PeriodogramAnalysis(OperatorMixin):
             Path to save the plot.
         """
         psd_dict = output[0]
-        num_of_segments = output[1]
-        power_dict = output[2]
+        power_dict = output[1]
+        num_of_segments = self.chunk_idx + 1
 
         for chunk in range(num_of_segments):
             for channel in range(self.num_channels):
@@ -222,7 +222,7 @@ class PeriodogramAnalysis(OperatorMixin):
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
-    def computing_ratio_and_bandpower(self, signal, power_dict, num_of_segments, ):
+    def computing_ratio_and_bandpower(self, signal, power_dict):
         """
         Compute power ratios and bandpowers for specific bands using Welch's and multitaper methods.
 
@@ -235,10 +235,7 @@ class PeriodogramAnalysis(OperatorMixin):
         num_of_segments : int
             Number of segments to divide the signal into.
         """
-        band = self.band
-        band_a = band[0]
-        band_b = band[1]
-
+        num_of_segments = self.chunk_idx + 1
         for chunk in range(num_of_segments):
             for channel in range(self.num_channels):
                 if channel in self.exclude_channel_list:
@@ -246,27 +243,30 @@ class PeriodogramAnalysis(OperatorMixin):
 
                 self.logger.info(f"Analysis of chunk {chunk}, channel {channel}\n")
 
-                band_names = ['delta', 'theta', 'alpha', 'beta']
+                band_names = ['delta', 'theta', 'alpha', 'beta', 'gamma']
                 absolute_powers = [power_dict[chunk][channel]['delta_power'],
                                     power_dict[chunk][channel]['theta_power'],
                                     power_dict[chunk][channel]['alpha_power'],
-                                    power_dict[chunk][channel]['beta_power']]
+                                    power_dict[chunk][channel]['beta_power'],
+                                    power_dict[chunk][channel]['gamma_power']]
+
                 relative_powers = [power_dict[chunk][channel]['delta_rel_power'],
                                     power_dict[chunk][channel]['theta_rel_power'],
                                     power_dict[chunk][channel]['alpha_rel_power'],
-                                    power_dict[chunk][channel]['beta_rel_power']]
+                                    power_dict[chunk][channel]['beta_rel_power'],
+                                    power_dict[chunk][channel]['gamma_rel_power']]
 
-                multitaper_power = self.computing_multitaper_bandpower(signal, band_a, channel)
-                multitaper_power_rel = self.computing_multitaper_bandpower(signal, band_a, channel, relative=True)
-                self.logger.info(f"{band_a[0]}Hz to {band_a[1]}Hz: Power (absolute) (Multitaper): {multitaper_power:.3f}\n")
-                self.logger.info(f"{band_a[0]}Hz to {band_a[1]}Hz: Power (relative) (Multitaper): {multitaper_power_rel:.3f}\n")
+                for band in self.band_list:
+                    multitaper_power = self.computing_multitaper_bandpower(signal, band, channel)
+                    multitaper_power_rel = self.computing_multitaper_bandpower(signal, band, channel, relative=True)
+                    self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (absolute) (Multitaper): {multitaper_power:.3f}\n")
+                    self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (relative) (Multitaper): {multitaper_power_rel:.3f}\n")
 
-                welch_power = self.computing_welch_bandpower(signal, band_a, channel) / self.computing_welch_bandpower(signal, band_b, channel)
-                welch_power_rel = (self.computing_welch_bandpower(signal, band_a, channel, relative=True)
-                            / self.computing_welch_bandpower(signal, band_b, channel, relative=True))
+                    welch_power = self.computing_welch_bandpower(signal, band, channel)
+                    welch_power_rel = self.computing_welch_bandpower(signal, band, channel, relative=True)
 
-                self.logger.info(f"{band_a[0]}Hz to {band_a[1]}Hz / {band_b[0]}Hz to {band_b[1]}: Power ratio (absolute) (Welch): {welch_power:.3f}\n")
-                self.logger.info(f"{band_a[0]}Hz to {band_a[1]}Hz / {band_b[0]}Hz to {band_b[1]}: Power ratio (relative) (Welch): {welch_power_rel:.3f}\n\n")
+                    self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (absolute) (Welch): {welch_power:.3f}\n")
+                    self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (relative) (Welch): {welch_power_rel:.3f}\n\n")
 
                 for band, abs_power, rel_power in zip(band_names, absolute_powers, relative_powers):
                     self.logger.info(
@@ -332,7 +332,7 @@ class PeriodogramAnalysis(OperatorMixin):
         local_signal = signal.data
         frequency = signal.rate
 
-        if self.window_length_for_welchis is not None:
+        if self.window_length_for_welch is not None:
             nperseg = self.window_length_for_welch * frequency 
         else:
             nperseg = (2 / low) * frequency
