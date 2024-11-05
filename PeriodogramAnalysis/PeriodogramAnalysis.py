@@ -55,17 +55,17 @@ class PeriodogramAnalysis(OperatorMixin):
         power_dict
             power dictionary
         """
+        psd_dict = defaultdict(dict)
+        power_dict = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            if chunk_idx >=1:
+            if chunk_idx > 1:
                 break
             self.chunk_idx = chunk_idx
             num_of_chunks = self.chunk_idx + 1
             self.num_channels = signal_piece.number_of_channels
 
             # Compute psd_dict and power_dict for welch_periodogram plotting
-            psd_dict = defaultdict(dict)
             psd_dict[self.chunk_idx] = self.computing_welch_periodogram(signal_piece)
-            power_dict = defaultdict(dict)
             power_dict[self.chunk_idx] = self.computing_absolute_and_relative_power(psd_dict[self.chunk_idx])
 
             # Compute band power and their ratio
@@ -114,6 +114,14 @@ class PeriodogramAnalysis(OperatorMixin):
         dict
             Dictionary containing power values for each chunk and channel.
         """
+        bands = {
+            "delta": (0.5, 4),
+            "theta": (4, 8),
+            "alpha": (8, 12),
+            "beta": (12, 30),
+            "gamma": (30, 100)
+        }
+
         power_dict = defaultdict(dict)
         for channel in range(self.num_channels):
             if channel in self.exclude_channel_list:
@@ -121,38 +129,43 @@ class PeriodogramAnalysis(OperatorMixin):
 
             freqs = psd_dict[channel]['freqs']
             psd = psd_dict[channel]['psd']
-
             freq_res = freqs[1] - freqs[0]
 
-            idx_delta = np.logical_and(freqs >= 0.5, freqs <= 4)
-            idx_theta = np.logical_and(freqs >= 4, freqs <= 8)
-            idx_alpha = np.logical_and(freqs >= 8, freqs <= 12)
-            idx_beta = np.logical_and(freqs >= 12, freqs <= 30)
+            idx_delta = np.logical_and(freqs >= bands['delta'][0], freqs <= bands['delta'][1])
+            idx_theta = np.logical_and(freqs >= bands['theta'][0], freqs <= bands['theta'][1])
+            idx_alpha = np.logical_and(freqs >= bands['alpha'][0], freqs <= bands['alpha'][1])
+            idx_beta = np.logical_and(freqs >= bands['beta'][0], freqs <= bands['beta'][1])
+            idx_gamma = np.logical_and(freqs >= bands['gamma'][0], freqs <= bands['gamma'][1])
 
             delta_power = simpson(psd[idx_delta], dx=freq_res)
             theta_power = simpson(psd[idx_theta], dx=freq_res)
             alpha_power = simpson(psd[idx_alpha], dx=freq_res)
             beta_power = simpson(psd[idx_beta], dx=freq_res)
+            gamma_power = simpson(psd[idx_gamma], dx=freq_res)
             total_power = simpson(psd, dx=freq_res)
 
             delta_rel_power = delta_power / total_power
             theta_rel_power = theta_power / total_power
             alpha_rel_power = alpha_power / total_power
             beta_rel_power = beta_power / total_power
+            gamma_rel_power = gamma_power / total_power
 
             power_dict[channel] = {
                 'idx_delta': idx_delta,
                 'idx_theta': idx_theta,
                 'idx_alpha': idx_alpha,
                 'idx_beta': idx_beta,
+                'idx_gamma': idx_gamma,
                 'delta_power': delta_power,
                 'theta_power': theta_power,
                 'alpha_power': alpha_power,
                 'beta_power': beta_power,
+                'gamma_power': gamma_power,
                 'delta_rel_power': delta_rel_power,
                 'theta_rel_power': theta_rel_power,
                 'alpha_rel_power': alpha_rel_power,
-                'beta_rel_power': beta_rel_power
+                'beta_rel_power': beta_rel_power,
+                'gamma_rel_power': gamma_rel_power
             }
 
         return power_dict
@@ -192,6 +205,7 @@ class PeriodogramAnalysis(OperatorMixin):
                 plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_theta'], color='lightseagreen')
                 plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_alpha'], color='goldenrod')
                 plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_beta'], color='deeppink')
+                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_gamma'], color='khaki')
 
                 plt.xlabel('Frequency (Hz)')
                 plt.ylabel('Power spectral density (V^2 / Hz)')
