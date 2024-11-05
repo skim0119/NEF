@@ -5,13 +5,12 @@ import matplotlib.pyplot as plt
 from scipy import signal as sig
 from scipy.integrate import simpson
 from dataclasses import dataclass, field
-from typing import Optional, Union
 from collections import defaultdict
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
 from miv.typing import SignalType
-from PowerSpectrumAnalysis import SpectrumAnalysis, multitaper_psd
+from PowerSpectrumAnalysis import multitaper_psd
 
 @dataclass
 class PeriodogramAnalysis(OperatorMixin):
@@ -29,7 +28,7 @@ class PeriodogramAnalysis(OperatorMixin):
     """
 
     exclude_channel_list: list = field(default_factory=list)
-    band_list: list = field(default_factory=lambda: [[0.5, 4], [12, 30]])  # TODO: Add all bounds
+    band_list: list = field(default_factory=lambda: [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]])
     window_length_for_welch: float = 4
 
     tag: str = "Periodogram Analysis"
@@ -37,7 +36,7 @@ class PeriodogramAnalysis(OperatorMixin):
     def __post_init__(self):
         super().__init__()
 
-    @cache_call
+    # @cache_call
     def __call__(self, signal: SignalType):
         """
         Perform the periodogram analysis on the given signal.
@@ -56,20 +55,24 @@ class PeriodogramAnalysis(OperatorMixin):
         power_dict
             power dictionary
         """
-        for idx, signal_piece in enumerate(signal):
-            num_of_chunks = idx + 1
+        for chunk_idx, signal_piece in enumerate(signal):
+            if chunk_idx >=1:
+                break
+            self.chunk_idx = chunk_idx
+            num_of_chunks = self.chunk_idx + 1
             self.num_channels = signal_piece.number_of_channels
 
             # Compute psd_dict and power_dict for welch_periodogram plotting
-            psd_dict = self.computing_welch_periodogram(signal_piece, num_of_chunks)
-            power_dict = self.computing_absolute_and_relative_power(psd_dict, num_of_chunks)
+            psd_dict = defaultdict(dict)
+            psd_dict[self.chunk_idx] = self.computing_welch_periodogram(signal_piece)
+            power_dict = defaultdict(dict)
+            power_dict[self.chunk_idx] = self.computing_absolute_and_relative_power(psd_dict[self.chunk_idx])
 
             # Compute band power and their ratio
-            self.computing_ratio_and_bandpower(signal_piece, power_dict, num_of_chunks)
-
+            # self.computing_ratio_and_bandpower(signal_piece, power_dict, num_of_chunks)
         return psd_dict, num_of_chunks, power_dict
 
-    def computing_welch_periodogram(self, signal, num_of_chunks, ):
+    def computing_welch_periodogram(self, signal):
         """
         Compute Welch's periodogram for the signal.
 
@@ -77,32 +80,25 @@ class PeriodogramAnalysis(OperatorMixin):
         -----------
         signal : SignalType
             Input signal to be analyzed.
-        num_of_chunks : int
-            Number of chunks to divide the signal into.
 
         Returns:
         --------
         dict
             Dictionary containing PSD values for each chunk and channel.
         """
-
         win = self.window_length_for_welch * signal.rate
-        psd_dict = {}
-
-        for chunk in range(num_of_chunks):
-            if chunk not in psd_dict:
-                psd_dict[chunk] = {}
-            for channel in range(self.num_channels):
-                if channel in self.exclude_channel_list:
-                    continue
-                freqs, psd = sig.welch(signal.data[:, channel], fs=signal.rate, nperseg=win)
-                psd_dict[chunk][channel] = {
-                    'freqs': freqs,
-                    'psd': psd
-                }
+        psd_dict = defaultdict(dict)
+        for channel in range(self.num_channels):
+            if channel in self.exclude_channel_list:
+                continue
+            freqs, psd = sig.welch(signal.data[:, channel], fs=signal.rate, nperseg=win)
+            psd_dict[channel] = {
+                'freqs': freqs,
+                'psd': psd
+            }
         return psd_dict
 
-    def computing_absolute_and_relative_power(self, psd_dict, num_of_chunks):
+    def computing_absolute_and_relative_power(self, psd_dict):
         """
         Compute absolute and relative power for different frequency bands.
 
@@ -119,46 +115,45 @@ class PeriodogramAnalysis(OperatorMixin):
             Dictionary containing power values for each chunk and channel.
         """
         power_dict = defaultdict(dict)
-        for chunk in range(num_of_chunks):
-            for channel in range(self.num_channels):
-                if channel in self.exclude_channel_list:
-                    continue
+        for channel in range(self.num_channels):
+            if channel in self.exclude_channel_list:
+                continue
 
-                freqs = psd_dict[chunk][channel]['freqs']
-                psd = psd_dict[chunk][channel]['psd']
+            freqs = psd_dict[channel]['freqs']
+            psd = psd_dict[channel]['psd']
 
-                freq_res = freqs[1] - freqs[0]
+            freq_res = freqs[1] - freqs[0]
 
-                idx_delta = np.logical_and(freqs >= 0.5, freqs <= 4)
-                idx_theta = np.logical_and(freqs >= 4, freqs <= 8)
-                idx_alpha = np.logical_and(freqs >= 8, freqs <= 12)
-                idx_beta = np.logical_and(freqs >= 12, freqs <= 30)
+            idx_delta = np.logical_and(freqs >= 0.5, freqs <= 4)
+            idx_theta = np.logical_and(freqs >= 4, freqs <= 8)
+            idx_alpha = np.logical_and(freqs >= 8, freqs <= 12)
+            idx_beta = np.logical_and(freqs >= 12, freqs <= 30)
 
-                delta_power = simpson(psd[idx_delta], dx=freq_res)
-                theta_power = simpson(psd[idx_theta], dx=freq_res)
-                alpha_power = simpson(psd[idx_alpha], dx=freq_res)
-                beta_power = simpson(psd[idx_beta], dx=freq_res)
-                total_power = simpson(psd, dx=freq_res)
+            delta_power = simpson(psd[idx_delta], dx=freq_res)
+            theta_power = simpson(psd[idx_theta], dx=freq_res)
+            alpha_power = simpson(psd[idx_alpha], dx=freq_res)
+            beta_power = simpson(psd[idx_beta], dx=freq_res)
+            total_power = simpson(psd, dx=freq_res)
 
-                delta_rel_power = delta_power / total_power
-                theta_rel_power = theta_power / total_power
-                alpha_rel_power = alpha_power / total_power
-                beta_rel_power = beta_power / total_power
+            delta_rel_power = delta_power / total_power
+            theta_rel_power = theta_power / total_power
+            alpha_rel_power = alpha_power / total_power
+            beta_rel_power = beta_power / total_power
 
-                power_dict[chunk][channel] = {
-                    'idx_delta': idx_delta,
-                    'idx_theta': idx_theta,
-                    'idx_alpha': idx_alpha,
-                    'idx_beta': idx_beta,
-                    'delta_power': delta_power,
-                    'theta_power': theta_power,
-                    'alpha_power': alpha_power,
-                    'beta_power': beta_power,
-                    'delta_rel_power': delta_rel_power,
-                    'theta_rel_power': theta_rel_power,
-                    'alpha_rel_power': alpha_rel_power,
-                    'beta_rel_power': beta_rel_power
-                }
+            power_dict[channel] = {
+                'idx_delta': idx_delta,
+                'idx_theta': idx_theta,
+                'idx_alpha': idx_alpha,
+                'idx_beta': idx_beta,
+                'delta_power': delta_power,
+                'theta_power': theta_power,
+                'alpha_power': alpha_power,
+                'beta_power': beta_power,
+                'delta_rel_power': delta_rel_power,
+                'theta_rel_power': theta_rel_power,
+                'alpha_rel_power': alpha_rel_power,
+                'beta_rel_power': beta_rel_power
+            }
 
         return power_dict
 
@@ -178,14 +173,16 @@ class PeriodogramAnalysis(OperatorMixin):
             Path to save the plot.
         """
         psd_dict = output[0]
-        num_of_segments = output[2]
-        power_dict = output[4]
+        num_of_segments = output[1]
+        power_dict = output[2]
 
         for chunk in range(num_of_segments):
             for channel in range(self.num_channels):
                 if channel in self.exclude_channel_list:
                     continue
-
+                print(num_of_segments)
+                print(chunk)
+                print(f"{psd_dict.keys()}")
                 freqs = psd_dict[chunk][channel]['freqs']
                 psd = psd_dict[chunk][channel]['psd']
                 plt.figure(figsize=(8, 4))
@@ -321,7 +318,7 @@ class PeriodogramAnalysis(OperatorMixin):
         local_signal = signal.data
         frequency = signal.rate
 
-        if self.window_length_for_welchis not None:
+        if self.window_length_for_welchis is not None:
             nperseg = self.window_length_for_welch * frequency 
         else:
             nperseg = (2 / low) * frequency
