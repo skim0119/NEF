@@ -19,10 +19,10 @@ class PeriodogramAnalysis(OperatorMixin):
 
        Attributes:
        -----------
-       exclude_channels : list
-           List of channels to be excluded from analysis.
-       band : list
-           List of frequency bands to analyze, default is [[0.5, 4], [12, 30]].
+       exclude_channel_list : list
+           Channels to be excluded from analysis.
+       band_list : list
+           Frequency bands to analyze, default is [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]], i.e. the five common frequency bands in EEG.
        window_length_for_welch : float
            Window length in seconds for Welch's method.
     """
@@ -36,7 +36,7 @@ class PeriodogramAnalysis(OperatorMixin):
     def __post_init__(self):
         super().__init__()
 
-    # @cache_call
+    @cache_call
     def __call__(self, signal: SignalType):
         """
         Perform the periodogram analysis on the given signal.
@@ -50,16 +50,12 @@ class PeriodogramAnalysis(OperatorMixin):
         --------
         psd_dict:
             PSD dictionary
-        num_of_chunks
-            number of chunks
         power_dict
             power dictionary
         """
         psd_dict = defaultdict(dict)
         power_dict = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            if chunk_idx > 1:
-                break
             self.chunk_idx = chunk_idx
             self.num_channels = signal_piece.number_of_channels
 
@@ -83,8 +79,8 @@ class PeriodogramAnalysis(OperatorMixin):
 
         Returns:
         --------
-        dict
-            Dictionary containing PSD values for each chunk and channel.
+        psd_dict
+            Dictionary containing PSD values for all channels in this chunk.
         """
         win = self.window_length_for_welch * signal.rate
         psd_dict = defaultdict(dict)
@@ -106,13 +102,11 @@ class PeriodogramAnalysis(OperatorMixin):
         -----------
         psd_dict : dict
             Dictionary containing PSD values for each chunk and channel.
-        num_of_chunks : int
-            Number of chunks to divide the signal into.
 
         Returns:
         --------
-        dict
-            Dictionary containing power values for each chunk and channel.
+        power_dict
+            Dictionary containing power values for all channels in this chunk.
         """
         bands = {
             "delta": (0.5, 4),
@@ -172,14 +166,12 @@ class PeriodogramAnalysis(OperatorMixin):
 
     def plot_welch_periodogram(self, output, input, show=False, save_path=None):
         """
-        Plot Welch's periodogram for the given signal.
+        Plot Welch's periodogram for the given signal, w.r.t. all channels in all chunks.
 
         Parameters:
         -----------
         output : tuple
             Output from the __call__ method, including PSD dictionary and other information.
-        input : SignalType
-            Input signal for plotting.
         show : bool
             Flag to indicate whether to show the plot.
         save_path : str
@@ -193,9 +185,7 @@ class PeriodogramAnalysis(OperatorMixin):
             for channel in range(self.num_channels):
                 if channel in self.exclude_channel_list:
                     continue
-                print(num_of_segments)
-                print(chunk)
-                print(f"{psd_dict.keys()}")
+
                 freqs = psd_dict[chunk][channel]['freqs']
                 psd = psd_dict[chunk][channel]['psd']
                 plt.figure(figsize=(8, 4))
@@ -224,7 +214,7 @@ class PeriodogramAnalysis(OperatorMixin):
 
     def computing_ratio_and_bandpower(self, signal, power_dict):
         """
-        Compute power ratios and bandpowers for specific bands using Welch's and multitaper methods.
+        Compute power ratios and band powers for specific bands using Welch's and multitaper methods.
 
         Parameters:
         -----------
@@ -232,8 +222,6 @@ class PeriodogramAnalysis(OperatorMixin):
             Input signal to be analyzed.
         power_dict : dict
             Dictionary containing power values for each chunk and channel.
-        num_of_segments : int
-            Number of segments to divide the signal into.
         """
         num_of_segments = self.chunk_idx + 1
         for chunk in range(num_of_segments):
@@ -276,7 +264,7 @@ class PeriodogramAnalysis(OperatorMixin):
 
     def computing_multitaper_bandpower(self, signal, band, channel, relative=False):
         """
-        Compute bandpower using multitaper method.
+        Compute band power using multitaper method.
 
         Parameters:
         -----------
@@ -285,14 +273,14 @@ class PeriodogramAnalysis(OperatorMixin):
         band : list
             Frequency band of interest.
         channel : int
-            Channel number to compute bandpower for.
+            Channel number to compute band power for.
         relative : bool
-            If True, compute relative bandpower.
+            If True, compute relative band power.
 
         Returns:
         --------
         float
-            Computed bandpower.
+            Computed band power.
         """
         band = np.asarray(band)
         low, high = band
@@ -310,7 +298,7 @@ class PeriodogramAnalysis(OperatorMixin):
 
     def computing_welch_bandpower(self, signal, band, channel, relative=False):
         """
-        Compute bandpower using Welch's method.
+        Compute band power using Welch's method.
 
         Parameters:
         -----------
@@ -319,14 +307,14 @@ class PeriodogramAnalysis(OperatorMixin):
         band : list
             Frequency band of interest.
         channel : int
-            Channel number to compute bandpower for.
+            Channel number to compute band power for.
         relative : bool
-            If True, compute relative bandpower.
+            If True, compute relative band power.
 
         Returns:
         --------
         float
-            Computed bandpower.
+            Computed band power.
         """
         low, high = band
         local_signal = signal.data
