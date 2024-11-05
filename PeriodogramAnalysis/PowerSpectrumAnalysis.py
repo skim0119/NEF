@@ -19,11 +19,11 @@ class SpectrumAnalysis(OperatorMixin):
 
     Attributes:
     -----------
-    exclude_channels : Optional[list]
-        List of channels to be excluded from analysis.
+    exclude_channel_list : list
+        Channels to be excluded from analysis.
     band_display : list
-        Frequency band range to display in plots.
-    win_sec : float
+        Frequency band range to display in spectrum comparison plots.
+    window_length_for_welch : float
         Window length in seconds for Welch's method.
     frequency_limit : list
         Frequency range limit for analysis.
@@ -31,8 +31,6 @@ class SpectrumAnalysis(OperatorMixin):
         Number of points per segment for spectrogram computation.
     noverlap : int
         Number of points to overlap between segments for spectrogram.
-    convert_db : bool
-        If True, convert power spectral density values to decibels (dB).
     """
     exclude_channel_list: list = field(default_factory=list)
     band_display: list = field(default_factory=lambda: [0, 100])
@@ -58,8 +56,10 @@ class SpectrumAnalysis(OperatorMixin):
 
         Returns:
         --------
-        tuple
-            PSD dictionary, excluded channels, number of chunks, band display range, dB conversion flag, spectrogram dictionary, frequency limit.
+        psd_dict:
+            PSD dictionary
+        spec_dict
+            spectrum dictionary
         """
         psd_dict = defaultdict(dict)
         spec_dict = defaultdict(dict)
@@ -113,6 +113,18 @@ class SpectrumAnalysis(OperatorMixin):
         return spec_dict
 
     def plot_spectrum_methods(self, output, input, show=False, save_path=None):
+        """
+        Plot spectrum estimates using different methods (Periodogram, Welch, Multitaper).
+
+        Parameters:
+        -----------
+        output : tuple
+            Output from the __call__ method, which includes the PSD dictionary.
+        show : bool, optional (default=False)
+            If set to True, the plot will be displayed.
+        save_path : str, optional (default=None)
+            If provided, the plot will be saved to the given path with filenames indicating the chunk and channel.
+        """
         psd_dict = output[0]
         num_of_chunks = self.chunk_idx + 1
 
@@ -147,6 +159,18 @@ class SpectrumAnalysis(OperatorMixin):
                 plt.close()
 
     def plot_spectrogram(self, output, input, show=False, save_path=None):
+        """
+        Plot spectrogram of the signal for given chunks and channels.
+
+        Parameters:
+        -----------
+        output : tuple
+            Output from the __call__ method, containing spectrogram data dictionary.
+        show : bool, optional (default=False)
+            If set to True, the spectrogram will be displayed.
+        save_path : str, optional (default=None)
+            If provided, the spectrogram plot will be saved to the given path with filenames indicating the chunk and channel.
+        """
         num_of_chunks = self.chunk_idx + 1
         spec_dict = output[1]
 
