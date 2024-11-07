@@ -57,9 +57,6 @@ class PeriodogramAnalysis(OperatorMixin):
         psd_dict = defaultdict(dict)
         power_dict = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            if chunk_idx > 1:
-                break
-
             # Compute psd_dict and power_dict for welch_periodogram plotting
             psd_dict[chunk_idx] = self.computing_welch_periodogram(signal_piece)
             power_dict[chunk_idx] = self.computing_absolute_and_relative_power(psd_dict[chunk_idx])

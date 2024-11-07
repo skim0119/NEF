@@ -16,12 +16,12 @@ dataset: DataManager = DataManager(data_collection_path=path)
 data: DataLoader = dataset[0]
 
 Periodogram_Analysis = PeriodogramAnalysis(
-        exclude_channel_list=[ch for ch in range(128) if ch not in [3]],
+        exclude_channel_list=[ch for ch in range(128) if ch not in [2, 3]],
         window_length_for_welch=4
     )
 
 Spectrum_Analysis = SpectrumAnalysis(
-        exclude_channel_list=[ch for ch in range(128) if ch not in [3]],
+        exclude_channel_list=[ch for ch in range(128) if ch not in [2, 3]],
         frequency_limit=[0, 10],
         window_length_for_welch=4,
         band_display = [0, 5]
@@ -31,6 +31,6 @@ data >> Periodogram_Analysis
 data >> Spectrum_Analysis
 pipeline1 = Pipeline(Periodogram_Analysis)
 pipeline2 = Pipeline(Spectrum_Analysis)
-# pipeline1.run(working_directory="results/", verbose=True)
+pipeline1.run(working_directory="results/", verbose=True)
 pipeline2.run(working_directory="results/", verbose=True)
 

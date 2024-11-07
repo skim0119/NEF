@@ -63,9 +63,6 @@ class SpectrumAnalysis(OperatorMixin):
         psd_dict = defaultdict(dict)
         spec_dict = defaultdict(dict)
         for chunk_index, signal_piece in enumerate(signal):
-            if chunk_index >= 1:
-                break
-
             # Plot spectrum using different methods
             psd_dict[chunk_index] = self.computing_multi_spectrum(signal_piece)
             # Plot spectrogram
