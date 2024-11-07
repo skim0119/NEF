@@ -3,14 +3,13 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal as sig
-from scipy.fft import rfft, rfftfreq
-from scipy.signal.windows import dpss
 from dataclasses import dataclass, field
 from collections import defaultdict
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
 from miv.typing import SignalType
+from MultitaperPowerSpectrum import multitaper_psd
 
 @dataclass
 class SpectrumAnalysis(OperatorMixin):
@@ -64,8 +63,8 @@ class SpectrumAnalysis(OperatorMixin):
         psd_dict = defaultdict(dict)
         spec_dict = defaultdict(dict)
         for chunk_index, signal_piece in enumerate(signal):
-            self.chunk_idx = chunk_index
-            self.num_channels = signal_piece.number_of_channels
+            if chunk_index >= 1:
+                break
 
             # Plot spectrum using different methods
             psd_dict[chunk_index] = self.computing_multi_spectrum(signal_piece)
@@ -78,7 +77,7 @@ class SpectrumAnalysis(OperatorMixin):
         win = self.window_length_for_welch * signal.rate
         psd_dict = defaultdict(dict)
 
-        for channel in range(self.num_channels):
+        for channel in range(signal.number_of_channels):
             if channel in self.exclude_channel_list:
                 continue
             freqs_per, psd_per = sig.periodogram(signal.data[:, channel], signal.rate)
@@ -101,7 +100,7 @@ class SpectrumAnalysis(OperatorMixin):
 
     def computing_spectrum(self, signal):
         spec_dict = defaultdict(dict)
-        for channel in range(self.num_channels):
+        for channel in range(signal.number_of_channels):
             if channel in self.exclude_channel_list:
                 continue
             frequencies, times, Sxx = sig.spectrogram(signal.data[:, channel], fs=signal.rate, nperseg=self.nperseg, noverlap=self.noverlap)
@@ -126,12 +125,10 @@ class SpectrumAnalysis(OperatorMixin):
             If provided, the plot will be saved to the given path with filenames indicating the chunk and channel.
         """
         psd_dict = output[0]
-        num_of_chunks = self.chunk_idx + 1
 
-        for chunk in range(num_of_chunks):
-            for channel in range(self.num_channels):
-                if channel in self.exclude_channel_list:
-                    continue
+        for chunk in psd_dict.keys():
+            for channel in psd_dict[chunk].keys():
+
                 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4), sharex=True, sharey=True)
                 sc = 'slategrey'
                 ax1.stem(psd_dict[chunk][channel]['freqs_per'], psd_dict[chunk][channel]['psd_per'], linefmt=sc, basefmt=" ", markerfmt=" ")
@@ -154,7 +151,7 @@ class SpectrumAnalysis(OperatorMixin):
                 if show:
                     plt.show()
                 if save_path is not None:
-                    plot_path = os.path.join(save_path, f"Chunk{chunk}:Comparison_figure_channel:{channel}.png")
+                    plot_path = os.path.join(save_path, f"Chunk{chunk}_Comparison_figure_channel:{channel}.png")
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
@@ -171,20 +168,25 @@ class SpectrumAnalysis(OperatorMixin):
         save_path : str, optional (default=None)
             If provided, the spectrogram plot will be saved to the given path with filenames indicating the chunk and channel.
         """
-        num_of_chunks = self.chunk_idx + 1
         spec_dict = output[1]
 
-        for chunk in range(num_of_chunks):
-            for channel in range(self.num_channels):
-                if channel in self.exclude_channel_list:
-                    continue
+        for chunk in spec_dict.keys():
+            for channel in spec_dict[chunk].keys():
+
                 spectrogram_data = spec_dict[chunk][channel]
                 frequencies = spectrogram_data['frequencies']
                 times = spectrogram_data['times']
                 Sxx = spectrogram_data['Sxx']
+                Sxx_log = 10 * np.log10(Sxx)
+
+                zero_freq_index = np.where(frequencies == 0)[0]
+                if zero_freq_index.size > 0:
+                    zero_freq_index = zero_freq_index[0]
+                    bias_at_zero_hz = Sxx_log[zero_freq_index, :]
+                    Sxx_log = Sxx_log - bias_at_zero_hz[np.newaxis, :]
 
                 plt.figure(figsize=(10, 6))
-                plt.pcolormesh(times, frequencies, 10 * np.log10(Sxx), shading='gouraud')
+                plt.pcolormesh(times, frequencies, Sxx_log, shading='gouraud')
                 plt.colorbar(label='Power spectral density (dB/Hz)')
                 plt.xlabel('Time (s)')
                 plt.ylabel('Frequency (Hz)')
@@ -194,76 +196,7 @@ class SpectrumAnalysis(OperatorMixin):
                 if show:
                     plt.show()
                 if save_path is not None:
-                    plot_path = os.path.join(save_path, f'Chunk{chunk}:Spectrogram_Channel_{channel}.png')
+                    plot_path = os.path.join(save_path, f'Chunk{chunk}_Spectrogram_Channel_{channel}.png')
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
-def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, adaptive=True, low_bias=True):
-    """
-    Compute multitaper power spectral density (PSD) of a given signal.
-
-    Parameters:
-    -----------
-    x : array-like
-        Input signal to compute PSD.
-    sfreq : float
-        Sampling frequency of the input signal.
-    fmin : float
-        Minimum frequency to consider in the PSD.
-    fmax : float
-        Maximum frequency to consider in the PSD.
-    bandwidth : float, optional
-        Bandwidth of the DPSS tapers. Default is None.
-    adaptive : bool
-        If True, use adaptive weighting to combine taper PSDs.
-    low_bias : bool
-        If True, only use tapers with eigenvalues greater than 0.9.
-
-    Returns:
-    --------
-    tuple
-        PSD values and corresponding frequency values.
-    """
-    n_times = x.shape[-1]
-    dshape = x.shape[:-1]
-    x = x.reshape(-1, n_times)
-
-    half_nbw = bandwidth * n_times / (2.0 * sfreq) if bandwidth else 4.0
-    n_tapers_max = int(2 * half_nbw)
-    dpss_windows, eigvals = dpss(n_times, half_nbw, n_tapers_max, return_ratios=True)
-
-    if low_bias:
-        idx = eigvals > 0.9
-        if not idx.any():
-            idx = [np.argmax(eigvals)]
-        dpss_windows, eigvals = dpss_windows[idx], eigvals[idx]
-
-    freqs = rfftfreq(n_times, 1.0 / sfreq)
-    freq_mask = (freqs >= fmin) & (freqs <= fmax)
-    freqs = freqs[freq_mask]
-    n_freqs = len(freqs)
-
-    n_tapers = len(dpss_windows)
-    psd = np.zeros((x.shape[0], n_freqs))
-
-    for i, sig in enumerate(x):
-        x_mt = rfft(sig[np.newaxis, :] * dpss_windows, n=n_times)
-        x_mt = x_mt[:, freq_mask]
-        if adaptive and n_tapers > 1:
-            psd_iter = np.mean(np.abs(x_mt[:2, :]) ** 2, axis=0)
-            var = np.var(sig)
-            tol = 1e-10
-            for _ in range(150):
-                weights = psd_iter / (eigvals[:, np.newaxis] * psd_iter + (1 - eigvals[:, np.newaxis]) * var)
-                weights *= np.sqrt(eigvals)[:, np.newaxis]
-                psd_iter_new = np.sum(weights ** 2 * np.abs(x_mt) ** 2, axis=0) / np.sum(weights ** 2, axis=0)
-                if np.max(np.abs(psd_iter_new - psd_iter)) < tol:
-                    break
-                psd_iter = psd_iter_new
-            psd[i] = psd_iter
-        else:
-            psd[i] = np.sum((np.sqrt(eigvals)[:, np.newaxis] ** 2) * np.abs(x_mt) ** 2, axis=0) / n_tapers
-
-    psd /= sfreq
-    psd = psd.reshape(dshape + (n_freqs,))
-    return psd, freqs

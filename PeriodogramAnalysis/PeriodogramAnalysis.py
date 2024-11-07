@@ -10,12 +10,13 @@ from collections import defaultdict
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
 from miv.typing import SignalType
-from PowerSpectrumAnalysis import multitaper_psd
+from MultitaperPowerSpectrum import multitaper_psd
 
 @dataclass
 class PeriodogramAnalysis(OperatorMixin):
     """
        A class to perform Periodogram Analysis using Welch's method and multitaper PSD.
+       More details are documented here: <https://raphaelvallat.com/bandpower.html>
 
        Attributes:
        -----------
@@ -28,7 +29,7 @@ class PeriodogramAnalysis(OperatorMixin):
     """
 
     exclude_channel_list: list = field(default_factory=list)
-    band_list: list = field(default_factory=lambda: [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]])
+    band_list: tuple = field(default_factory=lambda: ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100)))
     window_length_for_welch: float = 4
 
     tag: str = "Periodogram Analysis"
@@ -56,8 +57,8 @@ class PeriodogramAnalysis(OperatorMixin):
         psd_dict = defaultdict(dict)
         power_dict = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            self.chunk_idx = chunk_idx
-            self.num_channels = signal_piece.number_of_channels
+            if chunk_idx > 1:
+                break
 
             # Compute psd_dict and power_dict for welch_periodogram plotting
             psd_dict[chunk_idx] = self.computing_welch_periodogram(signal_piece)
@@ -84,7 +85,7 @@ class PeriodogramAnalysis(OperatorMixin):
         """
         win = self.window_length_for_welch * signal.rate
         psd_dict = defaultdict(dict)
-        for channel in range(self.num_channels):
+        for channel in range(signal.number_of_channels):
             if channel in self.exclude_channel_list:
                 continue
             freqs, psd = sig.welch(signal.data[:, channel], fs=signal.rate, nperseg=win)
@@ -117,9 +118,7 @@ class PeriodogramAnalysis(OperatorMixin):
         }
 
         power_dict = defaultdict(dict)
-        for channel in range(self.num_channels):
-            if channel in self.exclude_channel_list:
-                continue
+        for channel in psd_dict.keys():
 
             freqs = psd_dict[channel]['freqs']
             psd = psd_dict[channel]['psd']
@@ -179,34 +178,32 @@ class PeriodogramAnalysis(OperatorMixin):
         """
         psd_dict = output[0]
         power_dict = output[1]
-        num_of_segments = self.chunk_idx + 1
 
-        for chunk in range(num_of_segments):
-            for channel in range(self.num_channels):
-                if channel in self.exclude_channel_list:
-                    continue
+        for chunk in psd_dict.keys():
+            for channel in psd_dict[chunk].keys():
 
                 freqs = psd_dict[chunk][channel]['freqs']
                 psd = psd_dict[chunk][channel]['psd']
                 plt.figure(figsize=(8, 4))
                 plt.plot(freqs, psd, lw=1.5, color='k')
 
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_delta'], color='skyblue')
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_theta'], color='lightseagreen')
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_alpha'], color='goldenrod')
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_beta'], color='deeppink')
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_gamma'], color='khaki')
+                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_delta'], color='skyblue', label='Delta (0.5-4 Hz)')
+                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_theta'], color='lightseagreen', label='Theta (4-8 Hz)')
+                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_alpha'], color='goldenrod', label='Alpha (8-12 Hz)')
+                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_beta'], color='deeppink', label='Beta (12-30 Hz)')
+                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_gamma'], color='khaki', label='Gamma (30-100 Hz)')
 
                 plt.xlabel('Frequency (Hz)')
                 plt.ylabel('Power spectral density (V^2 / Hz)')
                 plt.ylim([0, np.max(psd_dict[chunk][channel]['psd']) * 1.1])
                 plt.title(f"Welch's periodogram of channel {channel}")
                 plt.xlim([0, 100])
+                plt.legend()
 
                 if show:
                     plt.show()
                 if save_path is not None:
-                    plot_path = os.path.join(save_path, f"Chunk{chunk}:welch_periodogram_of_channel_{channel}.png")
+                    plot_path = os.path.join(save_path, f"Chunk{chunk}_Welch_periodogram_of_channel_{channel}.png")
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
@@ -221,9 +218,8 @@ class PeriodogramAnalysis(OperatorMixin):
         power_dict : dict
             Dictionary containing power values for each chunk and channel.
         """
-        num_of_segments = self.chunk_idx + 1
-        for chunk in range(num_of_segments):
-            for channel in range(self.num_channels):
+        for chunk in power_dict.keys():
+            for channel in range(signal.number_of_channels):
                 if channel in self.exclude_channel_list:
                     continue
 
@@ -315,14 +311,13 @@ class PeriodogramAnalysis(OperatorMixin):
             Computed band power.
         """
         low, high = band
-        local_signal = signal.data
         frequency = signal.rate
 
         if self.window_length_for_welch is not None:
             nperseg = self.window_length_for_welch * frequency 
         else:
             nperseg = (2 / low) * frequency
-        freqs, psd = sig.welch(local_signal[:, channel], frequency, nperseg=nperseg)
+        freqs, psd = sig.welch(signal.data[:, channel], frequency, nperseg=nperseg)
 
         freq_res = freqs[1] - freqs[0]
         idx_band = np.logical_and(freqs >= low, freqs <= high)
