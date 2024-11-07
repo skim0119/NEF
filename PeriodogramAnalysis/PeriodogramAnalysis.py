@@ -62,7 +62,7 @@ class PeriodogramAnalysis(OperatorMixin):
             power_dict[chunk_idx] = self.computing_absolute_and_relative_power(psd_dict[chunk_idx])
 
             # Compute band power and their ratio
-            self.computing_ratio_and_bandpower(signal_piece, power_dict)
+            self.computing_ratio_and_bandpower(signal_piece, power_dict, chunk_idx)
 
         return psd_dict, power_dict
 
@@ -204,7 +204,7 @@ class PeriodogramAnalysis(OperatorMixin):
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
-    def computing_ratio_and_bandpower(self, signal, power_dict):
+    def computing_ratio_and_bandpower(self, signal, power_dict, chunk_index):
         """
         Compute power ratios and band powers for specific bands using Welch's and multitaper methods.
 
@@ -215,43 +215,40 @@ class PeriodogramAnalysis(OperatorMixin):
         power_dict : dict
             Dictionary containing power values for each chunk and channel.
         """
-        for chunk in power_dict.keys():
-            for channel in range(signal.number_of_channels):
-                if channel in self.exclude_channel_list:
-                    continue
+        for channel in range(signal.number_of_channels):
+            if channel in self.exclude_channel_list:
+                continue
 
-                self.logger.info(f"Analysis of chunk {chunk}, channel {channel}\n")
+            self.logger.info(f"Analysis of chunk {chunk_index}, channel {channel}\n")
 
-                band_names = ['delta', 'theta', 'alpha', 'beta', 'gamma']
-                absolute_powers = [power_dict[chunk][channel]['delta_power'],
-                                    power_dict[chunk][channel]['theta_power'],
-                                    power_dict[chunk][channel]['alpha_power'],
-                                    power_dict[chunk][channel]['beta_power'],
-                                    power_dict[chunk][channel]['gamma_power']]
+            band_names = ['delta', 'theta', 'alpha', 'beta', 'gamma']
+            absolute_powers = [power_dict[chunk_index][channel]['delta_power'],
+                                power_dict[chunk_index][channel]['theta_power'],
+                                power_dict[chunk_index][channel]['alpha_power'],
+                                power_dict[chunk_index][channel]['beta_power'],
+                                power_dict[chunk_index][channel]['gamma_power']]
 
-                relative_powers = [power_dict[chunk][channel]['delta_rel_power'],
-                                    power_dict[chunk][channel]['theta_rel_power'],
-                                    power_dict[chunk][channel]['alpha_rel_power'],
-                                    power_dict[chunk][channel]['beta_rel_power'],
-                                    power_dict[chunk][channel]['gamma_rel_power']]
+            relative_powers = [power_dict[chunk_index][channel]['delta_rel_power'],
+                                power_dict[chunk_index][channel]['theta_rel_power'],
+                                power_dict[chunk_index][channel]['alpha_rel_power'],
+                                power_dict[chunk_index][channel]['beta_rel_power'],
+                                power_dict[chunk_index][channel]['gamma_rel_power']]
 
-                for band in self.band_list:
-                    multitaper_power = self.computing_multitaper_bandpower(signal, band, channel)
-                    multitaper_power_rel = self.computing_multitaper_bandpower(signal, band, channel, relative=True)
-                    self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (absolute) (Multitaper): {multitaper_power:.3f}\n")
-                    self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (relative) (Multitaper): {multitaper_power_rel:.3f}\n")
+            for band in self.band_list:
+                multitaper_power = self.computing_multitaper_bandpower(signal, band, channel)
+                multitaper_power_rel = self.computing_multitaper_bandpower(signal, band, channel, relative=True)
+                self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (absolute) (Multitaper): {multitaper_power:.3f}\n")
+                self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (relative) (Multitaper): {multitaper_power_rel:.3f}\n")
 
-                    welch_power = self.computing_welch_bandpower(signal, band, channel)
-                    welch_power_rel = self.computing_welch_bandpower(signal, band, channel, relative=True)
+                welch_power = self.computing_welch_bandpower(signal, band, channel)
+                welch_power_rel = self.computing_welch_bandpower(signal, band, channel, relative=True)
 
-                    self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (absolute) (Welch): {welch_power:.3f}\n")
-                    self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (relative) (Welch): {welch_power_rel:.3f}\n\n")
+                self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (absolute) (Welch): {welch_power:.3f}\n")
+                self.logger.info(f"{band[0]}Hz to {band[1]}Hz: Power (relative) (Welch): {welch_power_rel:.3f}\n\n")
 
-                for band, abs_power, rel_power in zip(band_names, absolute_powers, relative_powers):
-                    self.logger.info(
-                        f"Absolute {band} power (Welch) of channel {channel} is: {abs_power:.3f} uV^2\n")
-                    self.logger.info(
-                        f"Relative {band} power (Welch) of channel {channel} is: {rel_power:.3f} uV^2\n\n")
+            for band, abs_power, rel_power in zip(band_names, absolute_powers, relative_powers):
+                self.logger.info(f"Absolute {band} power (Welch) of channel {channel} is: {abs_power:.3f} uV^2\n")
+                self.logger.info(f"Relative {band} power (Welch) of channel {channel} is: {rel_power:.3f} uV^2\n\n")
 
     def computing_multitaper_bandpower(self, signal, band, channel, relative=False):
         """
