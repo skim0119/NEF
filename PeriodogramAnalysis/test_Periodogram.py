@@ -1,5 +1,3 @@
-import os
-import pytest
 import numpy as np
 
 from miv.core.datatype import Signal
@@ -54,13 +52,11 @@ def test_periodogram_analysis_call():
                 assert 'psd' in psd_dict[chunk_idx][channel]
 
                 assert channel in power_dict[chunk_idx]
-
                 required_keys = [
                     'idx_delta', 'idx_theta', 'idx_alpha', 'idx_beta', 'idx_gamma',
                     'delta_power', 'theta_power', 'alpha_power', 'beta_power', 'gamma_power',
                     'delta_rel_power', 'theta_rel_power', 'alpha_rel_power', 'beta_rel_power', 'gamma_rel_power'
                 ]
-
                 for key in required_keys:
                     assert key in power_dict[chunk_idx][channel]
 
@@ -69,6 +65,7 @@ def test_periodogram_analysis_call_default():
 
     signal = list(mock_power_generator())
     analysis(signal)
+    # Test default settings
     assert len(analysis.exclude_channel_list) == 0
     assert analysis.band_list == ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100))
     assert analysis.window_length_for_welch == 4
@@ -83,15 +80,15 @@ def test_computing_ratio_and_bandpower(mocker):
     logger_info_spy = mocker.spy(analysis.logger, 'info')
     analysis.computing_ratio_and_bandpower(signal[0], power_dict, 0)
 
-    # Test how many times logger is called
-    assert logger_info_spy.call_count == (signal[0].number_of_channels - 2) * 31
+    # Test how many times logger is called, 31 = 1 + 10 * 4*5, where 5 is the number of bands
+    assert logger_info_spy.call_count == (signal[0].number_of_channels - len(analysis.exclude_channel_list)) * 31
 
     psd_dict, power_dict = analysis2(signal)
     logger_info_spy2 = mocker.spy(analysis2.logger, 'info')
     analysis2.computing_ratio_and_bandpower(signal[0], power_dict, 0)
 
-    # Test how many times logger is called
-    assert logger_info_spy2.call_count == (signal[0].number_of_channels - 2) * 19
+    # Test how many times logger is called, 19 = 1 + 10 + 4*2, where 2 is the number of bands
+    assert logger_info_spy2.call_count == (signal[0].number_of_channels - len(analysis.exclude_channel_list)) * 19
 
 
 def test_computing_multitaper_bandpower():
@@ -111,6 +108,8 @@ def test_computing_multitaper_bandpower():
     assert isinstance(relative_bandpower, float)
     assert relative_bandpower >= 0
     assert relative_bandpower <= 1
+    assert bandpower != relative_bandpower
+
 
 def test_computing_welch_bandpower():
     analysis = PeriodogramAnalysis(window_length_for_welch=2, exclude_channel_list=[])
@@ -129,6 +128,8 @@ def test_computing_welch_bandpower():
     assert isinstance(relative_bandpower, float)
     assert relative_bandpower >= 0
     assert relative_bandpower <= 1
+    assert bandpower != relative_bandpower
+
 
 def test_plot_welch_periodogram(tmp_path):
     analysis = PeriodogramAnalysis(window_length_for_welch=2, exclude_channel_list=[3, 5])
@@ -136,14 +137,14 @@ def test_plot_welch_periodogram(tmp_path):
     psd_dict, power_dict = analysis(signal)
     output = (psd_dict, power_dict)
 
-    save_path = tmp_path
-    analysis.plot_welch_periodogram(output, signal, show=False, save_path=save_path)
+    analysis.plot_welch_periodogram(output, signal, show=False, save_path=tmp_path)
 
     # Check if plots are saved correctly for each chunk and channel
     for chunk in psd_dict.keys():
         for channel in psd_dict[chunk].keys():
-            plot_file = save_path / f"Chunk{chunk}_Welch_periodogram_of_channel_{channel}.png"
+            plot_file = tmp_path / f"Chunk{chunk}_Welch_periodogram_of_channel_{channel}.png"
             assert plot_file.exists()
+
 
 def test_SpectrumAnalysis_call():
     Spectrum_Analysis = SpectrumAnalysis(
@@ -204,13 +205,12 @@ def test_plot_spectrum_methods(tmp_path):
     psd_dict, spec_dict = Spectrum_Analysis(signal)
     output = (psd_dict, spec_dict)
 
-    save_path = tmp_path
-    Spectrum_Analysis.plot_spectrum_methods(output, signal, show=False, save_path=save_path)
+    Spectrum_Analysis.plot_spectrum_methods(output, signal, show=False, save_path=tmp_path)
 
     # Check if plots are saved correctly for each chunk and channel
     for chunk in psd_dict.keys():
         for channel in psd_dict[chunk].keys():
-            plot_file = save_path / f"Chunk{chunk}_Comparison_figure_channel:{channel}.png"
+            plot_file = tmp_path / f"Chunk{chunk}_Comparison_figure_channel:{channel}.png"
             assert plot_file.exists()
 
 def test_plot_spectrogram(tmp_path):
@@ -219,11 +219,11 @@ def test_plot_spectrogram(tmp_path):
     psd_dict, spec_dict = Spectrum_Analysis(signal)
     output = (psd_dict, spec_dict)
 
-    save_path = tmp_path
-    Spectrum_Analysis.plot_spectrogram(output, signal, show=False, save_path=save_path)
+    Spectrum_Analysis.plot_spectrogram(output, signal, show=False, save_path=tmp_path)
 
     # Check if plots are saved correctly for each chunk and channel
     for chunk in psd_dict.keys():
         for channel in psd_dict[chunk].keys():
-            plot_file = save_path / f'Chunk{chunk}_Spectrogram_Channel_{channel}.png'
+            plot_file = tmp_path / f'Chunk{chunk}_Spectrogram_Channel_{channel}.png'
             assert plot_file.exists()
+
