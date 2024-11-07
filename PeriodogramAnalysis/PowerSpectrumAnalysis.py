@@ -34,9 +34,9 @@ class SpectrumAnalysis(OperatorMixin):
     exclude_channel_list: list = field(default_factory=list)
     band_display: list = field(default_factory=lambda: [0, 100])
     window_length_for_welch: float = 4
-    frequency_limit: list = field(default_factory=lambda: [0, 100])
+    frequency_limit: list = field(default_factory=lambda: [0.5, 100])
     nperseg: int = 2048
-    noverlap: int = 1024
+    noverlap: int = 1536
 
     tag = "Spectrum_Analysis"
 
@@ -174,15 +174,17 @@ class SpectrumAnalysis(OperatorMixin):
                 frequencies = spectrogram_data['frequencies']
                 times = spectrogram_data['times']
                 Sxx = spectrogram_data['Sxx']
+
+                zero_freq_indices = np.where(frequencies == 0)[0]
+                zero_freq_idx = zero_freq_indices[0]
+                Sxx -= Sxx[zero_freq_idx, :]
+
+                Sxx[zero_freq_idx, :] = 1e-10
+                Sxx = np.maximum(Sxx, 1e-10)
                 Sxx_log = 10 * np.log10(Sxx)
 
-                zero_freq_index = np.where(frequencies == 0)[0]
-                if zero_freq_index.size > 0:
-                    zero_freq_index = zero_freq_index[0]
-                    bias_at_zero_hz = Sxx_log[zero_freq_index, :]
-                    Sxx_log = Sxx_log - bias_at_zero_hz[np.newaxis, :]
-
                 plt.figure(figsize=(10, 6))
+                plt.yscale('log')
                 plt.pcolormesh(times, frequencies, Sxx_log, shading='gouraud')
                 plt.colorbar(label='Power spectral density (dB/Hz)')
                 plt.xlabel('Time (s)')

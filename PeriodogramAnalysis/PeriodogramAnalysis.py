@@ -16,7 +16,7 @@ from MultitaperPowerSpectrum import multitaper_psd
 class PeriodogramAnalysis(OperatorMixin):
     """
        A class to perform Periodogram Analysis using Welch's method and multitaper PSD.
-       More details are documented here: <https://raphaelvallat.com/bandpower.html>
+       The algorithm implementation is inspired from: <https://raphaelvallat.com/bandpower.html>
 
        Attributes:
        -----------
@@ -29,7 +29,7 @@ class PeriodogramAnalysis(OperatorMixin):
     """
 
     exclude_channel_list: list = field(default_factory=list)
-    band_list: tuple = field(default_factory=lambda: ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100)))
+    band_list: tuple = ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100))
     window_length_for_welch: float = 4
 
     tag: str = "Periodogram Analysis"
