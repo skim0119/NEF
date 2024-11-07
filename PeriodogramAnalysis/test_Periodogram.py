@@ -4,6 +4,7 @@ import numpy as np
 
 from miv.core.datatype import Signal
 from PeriodogramAnalysis import PeriodogramAnalysis
+from PowerSpectrumAnalysis import SpectrumAnalysis
 
 def mock_power():
     data = np.random.rand(30000, 10)  # Mock data with 30,000 samples and 5 channels
@@ -63,6 +64,15 @@ def test_periodogram_analysis_call():
                 for key in required_keys:
                     assert key in power_dict[chunk_idx][channel]
 
+def test_periodogram_analysis_call_default():
+    analysis = PeriodogramAnalysis()
+
+    signal = list(mock_power_generator())
+    analysis(signal)
+    assert len(analysis.exclude_channel_list) == 0
+    assert analysis.band_list == ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100))
+    assert analysis.window_length_for_welch == 4
+
 
 def test_computing_ratio_and_bandpower(mocker):
     signal = list(mock_power_generator())
@@ -119,3 +129,101 @@ def test_computing_welch_bandpower():
     assert isinstance(relative_bandpower, float)
     assert relative_bandpower >= 0
     assert relative_bandpower <= 1
+
+def test_plot_welch_periodogram(tmp_path):
+    analysis = PeriodogramAnalysis(window_length_for_welch=2, exclude_channel_list=[3, 5])
+    signal = list(mock_power_generator())
+    psd_dict, power_dict = analysis(signal)
+    output = (psd_dict, power_dict)
+
+    save_path = tmp_path
+    analysis.plot_welch_periodogram(output, signal, show=False, save_path=save_path)
+
+    # Check if plots are saved correctly for each chunk and channel
+    for chunk in psd_dict.keys():
+        for channel in psd_dict[chunk].keys():
+            plot_file = save_path / f"Chunk{chunk}_Welch_periodogram_of_channel_{channel}.png"
+            assert plot_file.exists()
+
+def test_SpectrumAnalysis_call():
+    Spectrum_Analysis = SpectrumAnalysis(
+        exclude_channel_list=[2, 3],
+        frequency_limit=[0, 10],
+        window_length_for_welch=4,
+        band_display=[0, 5]
+    )
+
+    signal = list(mock_power_generator())
+    psd_dict, spec_dict = Spectrum_Analysis(signal)
+
+    # Check the output are both dicts
+    assert isinstance(psd_dict, dict)
+    assert isinstance(spec_dict, dict)
+
+    # Check that all chunks are in the dicts
+    for chunk_idx in range(len(signal)):
+        assert chunk_idx in psd_dict.keys()
+        assert chunk_idx in spec_dict.keys()
+
+        # Check PSD dict and spec dict contains needed channels only, and has needed data
+        for channel in range(10):
+            if channel in Spectrum_Analysis.exclude_channel_list:
+                assert channel not in psd_dict[chunk_idx]
+                assert channel not in spec_dict[chunk_idx]
+
+            else:
+                assert channel in psd_dict[chunk_idx]
+                required_keys_psd = [
+                    'freqs_per', 'freqs_welch', 'freqs_mt', 'psd_per',
+                    'psd_welch', 'psd_mt'
+                ]
+                for key in required_keys_psd:
+                    assert key in psd_dict[chunk_idx][channel]
+
+                assert channel in spec_dict[chunk_idx]
+                required_keys_spec = ['frequencies', 'times', 'Sxx']
+                for key in required_keys_spec:
+                    assert key in spec_dict[chunk_idx][channel]
+
+def test_SpectrumAnalysis_call_default():
+    Spectrum_Analysis = SpectrumAnalysis()
+
+    signal = list(mock_power_generator())
+    Spectrum_Analysis(signal)
+    # Test if default setting is correct
+    assert len(Spectrum_Analysis.exclude_channel_list) == 0
+    assert Spectrum_Analysis.band_display == [0, 100]
+    assert Spectrum_Analysis.window_length_for_welch == 4
+    assert Spectrum_Analysis.frequency_limit == [0, 100]
+    assert Spectrum_Analysis.nperseg == 2048
+    assert Spectrum_Analysis.noverlap == 1024
+
+def test_plot_spectrum_methods(tmp_path):
+    Spectrum_Analysis = SpectrumAnalysis(exclude_channel_list=[2, 3])
+    signal = list(mock_power_generator())
+    psd_dict, spec_dict = Spectrum_Analysis(signal)
+    output = (psd_dict, spec_dict)
+
+    save_path = tmp_path
+    Spectrum_Analysis.plot_spectrum_methods(output, signal, show=False, save_path=save_path)
+
+    # Check if plots are saved correctly for each chunk and channel
+    for chunk in psd_dict.keys():
+        for channel in psd_dict[chunk].keys():
+            plot_file = save_path / f"Chunk{chunk}_Comparison_figure_channel:{channel}.png"
+            assert plot_file.exists()
+
+def test_plot_spectrogram(tmp_path):
+    Spectrum_Analysis = SpectrumAnalysis(exclude_channel_list=[2, 3])
+    signal = list(mock_power_generator())
+    psd_dict, spec_dict = Spectrum_Analysis(signal)
+    output = (psd_dict, spec_dict)
+
+    save_path = tmp_path
+    Spectrum_Analysis.plot_spectrogram(output, signal, show=False, save_path=save_path)
+
+    # Check if plots are saved correctly for each chunk and channel
+    for chunk in psd_dict.keys():
+        for channel in psd_dict[chunk].keys():
+            plot_file = save_path / f'Chunk{chunk}_Spectrogram_Channel_{channel}.png'
+            assert plot_file.exists()
