@@ -284,10 +284,9 @@ class PeriodogramAnalysis(OperatorMixin):
         """
         band = np.asarray(band)
         low, high = band
-        local_signal = signal.data
         frequency = signal.rate
 
-        psd, freqs = multitaper_psd(local_signal[:, channel], frequency)
+        psd, freqs = multitaper_psd(signal[channel], frequency)
         freq_res = freqs[1] - freqs[0]
         idx_band = np.logical_and(freqs >= low, freqs <= high)
         bp = simpson(psd[idx_band], dx=freq_res)
@@ -323,7 +322,7 @@ class PeriodogramAnalysis(OperatorMixin):
             nperseg = self.window_length_for_welch * frequency 
         else:
             nperseg = (2 / low) * frequency
-        freqs, psd = sig.welch(signal.data[:, channel], frequency, nperseg=nperseg)
+        freqs, psd = sig.welch(signal[channel], frequency, nperseg=nperseg)
 
         freq_res = freqs[1] - freqs[0]
         idx_band = np.logical_and(freqs >= low, freqs <= high)

@@ -149,7 +149,7 @@ class SpectrumAnalysis(OperatorMixin):
                 if show:
                     plt.show()
                 if save_path is not None:
-                    plot_path = os.path.join(save_path, f"Chunk{chunk}_Comparison_figure_channel:{channel}.png")
+                    plot_path = os.path.join(save_path, f"Chunk{chunk}_Comparison_figure_channel_{channel}.png")
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
