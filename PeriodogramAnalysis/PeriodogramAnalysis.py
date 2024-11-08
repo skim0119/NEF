@@ -85,7 +85,8 @@ class PeriodogramAnalysis(OperatorMixin):
         for channel in range(signal.number_of_channels):
             if channel in self.exclude_channel_list:
                 continue
-            freqs, psd = sig.welch(signal.data[:, channel], fs=signal.rate, nperseg=win)
+            signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
+            freqs, psd = sig.welch(signal_no_bias, fs=signal.rate, nperseg=win, nfft=4*win)
             psd_dict[channel] = {
                 'freqs': freqs,
                 'psd': psd
@@ -181,21 +182,32 @@ class PeriodogramAnalysis(OperatorMixin):
 
                 freqs = psd_dict[chunk][channel]['freqs']
                 psd = psd_dict[chunk][channel]['psd']
-                plt.figure(figsize=(8, 4))
-                plt.plot(freqs, psd, lw=1.5, color='k')
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
 
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_delta'], color='skyblue', label='Delta (0.5-4 Hz)')
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_theta'], color='lightseagreen', label='Theta (4-8 Hz)')
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_alpha'], color='goldenrod', label='Alpha (8-12 Hz)')
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_beta'], color='deeppink', label='Beta (12-30 Hz)')
-                plt.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_gamma'], color='khaki', label='Gamma (30-100 Hz)')
+                ax1.semilogx(freqs, psd, lw=1.5, color='k')
+                ax1.set_xlabel('Frequency (Hz)')
+                ax1.set_ylabel('Power spectral density (V^2 / Hz)')
+                ax1.set_title(f"Welch's periodogram of channel {channel}")
+                ax1.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_delta'], color='skyblue', label='Delta (0.5-4 Hz)')
+                ax1.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_theta'], color='lightseagreen', label='Theta (4-8 Hz)')
+                ax1.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_alpha'], color='goldenrod', label='Alpha (8-12 Hz)')
+                ax1.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_beta'], color='deeppink', label='Beta (12-30 Hz)')
+                ax1.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_gamma'], color='khaki', label='Gamma (30-100 Hz)')
+                ax1.set_ylim([0, np.max(psd) * 1.1])
+                ax1.set_xlim([1e-1, 100])
+                ax1.legend()
 
-                plt.xlabel('Frequency (Hz)')
-                plt.ylabel('Power spectral density (V^2 / Hz)')
-                plt.ylim([0, np.max(psd_dict[chunk][channel]['psd']) * 1.1])
-                plt.title(f"Welch's periodogram of channel {channel}")
-                plt.xlim([0, 100])
-                plt.legend()
+                ax2.plot(freqs, psd, lw=1.5, color='k')
+                ax2.set_xlabel('Frequency (Hz)')
+                ax2.set_ylabel('Power spectral density (V^2 / Hz)')
+                ax2.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_delta'], color='skyblue', label='Delta (0.5-4 Hz)')
+                ax2.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_theta'], color='lightseagreen', label='Theta (4-8 Hz)')
+                ax2.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_alpha'], color='goldenrod', label='Alpha (8-12 Hz)')
+                ax2.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_beta'], color='deeppink', label='Beta (12-30 Hz)')
+                ax2.fill_between(freqs, psd, where=power_dict[chunk][channel]['idx_gamma'], color='khaki', label='Gamma (30-100 Hz)')
+                ax2.set_ylim([0, np.max(psd) * 1.1])
+                ax2.set_xlim([0, 100])
+                ax2.legend()
 
                 if show:
                     plt.show()

@@ -100,7 +100,8 @@ class SpectrumAnalysis(OperatorMixin):
         for channel in range(signal.number_of_channels):
             if channel in self.exclude_channel_list:
                 continue
-            frequencies, times, Sxx = sig.spectrogram(signal.data[:, channel], fs=signal.rate, nperseg=self.nperseg, noverlap=self.noverlap)
+            signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
+            frequencies, times, Sxx = sig.spectrogram(signal_no_bias, fs=signal.rate, nperseg=self.nperseg, noverlap=self.noverlap)
             spec_dict[channel] = {
                 'frequencies': frequencies,
                 'times': times,
@@ -174,17 +175,10 @@ class SpectrumAnalysis(OperatorMixin):
                 frequencies = spectrogram_data['frequencies']
                 times = spectrogram_data['times']
                 Sxx = spectrogram_data['Sxx']
-
-                zero_freq_indices = np.where(frequencies == 0)[0]
-                zero_freq_idx = zero_freq_indices[0]
-                Sxx -= Sxx[zero_freq_idx, :]
-
-                Sxx[zero_freq_idx, :] = 1e-10
                 Sxx = np.maximum(Sxx, 1e-10)
                 Sxx_log = 10 * np.log10(Sxx)
 
                 plt.figure(figsize=(10, 6))
-                plt.yscale('log')
                 plt.pcolormesh(times, frequencies, Sxx_log, shading='gouraud')
                 plt.colorbar(label='Power spectral density (dB/Hz)')
                 plt.xlabel('Time (s)')
