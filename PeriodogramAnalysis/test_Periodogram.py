@@ -195,9 +195,9 @@ def test_SpectrumAnalysis_call_default():
     assert len(Spectrum_Analysis.exclude_channel_list) == 0
     assert Spectrum_Analysis.band_display == [0, 100]
     assert Spectrum_Analysis.window_length_for_welch == 4
-    assert Spectrum_Analysis.frequency_limit == [0, 100]
-    assert Spectrum_Analysis.nperseg == 2048
-    assert Spectrum_Analysis.noverlap == 1024
+    assert Spectrum_Analysis.frequency_limit == [0.5, 100]
+    assert Spectrum_Analysis.plotting_interval == [0, 60]
+    assert Spectrum_Analysis.nperseg_ratio == 0.25
 
 def test_plot_spectrum_methods(tmp_path):
     Spectrum_Analysis = SpectrumAnalysis(exclude_channel_list=[2, 3])
@@ -210,7 +210,7 @@ def test_plot_spectrum_methods(tmp_path):
     # Check if plots are saved correctly for each chunk and channel
     for chunk in psd_dict.keys():
         for channel in psd_dict[chunk].keys():
-            plot_file = tmp_path / f"Chunk{chunk}_Comparison_figure_channel:{channel}.png"
+            plot_file = tmp_path / f"Chunk{chunk}_Comparison_figure_channel_{channel}.png"
             assert plot_file.exists()
 
 def test_plot_spectrogram(tmp_path):
