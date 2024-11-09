@@ -35,8 +35,8 @@ class SpectrumAnalysis(OperatorMixin):
     band_display: list = field(default_factory=lambda: [0, 100])
     window_length_for_welch: float = 4
     frequency_limit: list = field(default_factory=lambda: [0.5, 100])
-    nperseg: int = 2048
-    noverlap: int = 1536
+    plotting_interval: list = field(default_factory=lambda: [0, 60])
+    nperseg_ratio: float = 0.25
 
     tag = "Spectrum_Analysis"
 
@@ -97,11 +97,13 @@ class SpectrumAnalysis(OperatorMixin):
 
     def computing_spectrum(self, signal):
         spec_dict = defaultdict(dict)
+        nperseg = int(signal.rate * self.nperseg_ratio)
+        noverlap = int(nperseg / 2)
         for channel in range(signal.number_of_channels):
             if channel in self.exclude_channel_list:
                 continue
             signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
-            frequencies, times, Sxx = sig.spectrogram(signal_no_bias, fs=signal.rate, nperseg=self.nperseg, noverlap=self.noverlap)
+            frequencies, times, Sxx = sig.spectrogram(signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap)
             spec_dict[channel] = {
                 'frequencies': frequencies,
                 'times': times,
@@ -175,16 +177,37 @@ class SpectrumAnalysis(OperatorMixin):
                 frequencies = spectrogram_data['frequencies']
                 times = spectrogram_data['times']
                 Sxx = spectrogram_data['Sxx']
-                Sxx = np.maximum(Sxx, 1e-10)
+                Sxx = np.maximum(Sxx, 1e-2)
                 Sxx_log = 10 * np.log10(Sxx)
 
-                plt.figure(figsize=(10, 6))
-                plt.pcolormesh(times, frequencies, Sxx_log, shading='gouraud')
-                plt.colorbar(label='Power spectral density (dB/Hz)')
-                plt.xlabel('Time (s)')
-                plt.ylabel('Frequency (Hz)')
-                plt.title(f'Spectrogram for Channel {channel}')
-                plt.ylim(self.frequency_limit)
+                fig, ax = plt.subplots(2, 1, figsize=(14, 12))
+
+                cax1 = ax[0].pcolormesh(times, frequencies, Sxx_log, shading='gouraud', cmap='inferno')
+                ax[0].set_title('Spectrogram')
+                ax[0].set_xlabel('Time (s)')
+                ax[0].set_ylabel('Frequency (Hz)')
+                ax[0].set_ylim(self.frequency_limit)
+                ax[0].set_xlim(self.plotting_interval)
+                for freq in [4, 8, 12, 30]:
+                    ax[0].axhline(y=freq, color='black', linestyle='--', linewidth=1, label=f'{freq} Hz')
+
+                cax2 = ax[1].pcolormesh(times, frequencies, Sxx_log, shading='gouraud', cmap='inferno')
+                ax[1].set_xlabel('Time (s)')
+                ax[1].set_ylabel('Frequency (Hz)')
+                ax[1].set_ylim([0, 12])
+                ax[1].set_xlim(self.plotting_interval)
+                for freq in [4, 8, 12, 30]:
+                    ax[1].axhline(y=freq, color='black', linestyle='--', linewidth=1, label=f'{freq} Hz')
+
+                fig.colorbar(cax1, ax=ax[:], location='right', label='Power spectral density (dB/Hz)', fraction=0.02,
+                             pad=0.04)
+
+                # If Histogram is needed
+                # psd_values = Sxx_log.flatten()
+                # ax[1].hist(psd_values[psd_values > -40], bins=100, color='blue', alpha=0.7)
+                # ax[1].set_title('Histogram of Power Spectral Density')
+                # ax[1].set_xlabel('Power spectral density (dB/Hz)')
+                # ax[1].set_ylabel('Count')
 
                 if show:
                     plt.show()
