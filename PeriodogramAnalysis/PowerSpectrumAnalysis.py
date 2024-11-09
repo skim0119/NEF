@@ -1,15 +1,19 @@
 import os
 
+import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal as sig
 from dataclasses import dataclass, field
 from collections import defaultdict
+from typing import List, Tuple, Dict, Any, Generator, Optional
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
-from miv.typing import SignalType
+from miv.core.datatype import Signal
 from MultitaperPowerSpectrum import multitaper_psd
+
+DictType = Dict[int, Dict[int, Dict[str, Any]]]
 
 @dataclass
 class SpectrumAnalysis(OperatorMixin):
@@ -31,11 +35,11 @@ class SpectrumAnalysis(OperatorMixin):
     noverlap : int
         Number of points to overlap between segments for spectrogram.
     """
-    exclude_channel_list: list = field(default_factory=list)
-    band_display: list = field(default_factory=lambda: [0, 100])
+    exclude_channel_list: list[int] = field(default_factory=list)
+    band_display: list[float] = field(default_factory=lambda: [0, 100])
     window_length_for_welch: float = 4
-    frequency_limit: list = field(default_factory=lambda: [0.5, 100])
-    plotting_interval: list = field(default_factory=lambda: [0, 60])
+    frequency_limit: list[float] = field(default_factory=lambda: [0.5, 100])
+    plotting_interval: list[float] = field(default_factory=lambda: [0, 60])
     nperseg_ratio: float = 0.25
 
     tag = "Spectrum_Analysis"
@@ -44,13 +48,13 @@ class SpectrumAnalysis(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(self, signal: SignalType):
+    def __call__(self, signal: Generator[Signal, None, None]) -> Tuple[DictType, DictType]:
         """
         Perform spectrum analysis on the given signal using multiple methods.
 
         Parameters:
         -----------
-        signal : SignalType
+        signal : Generator
             Input signal to be analyzed.
 
         Returns:
@@ -60,8 +64,8 @@ class SpectrumAnalysis(OperatorMixin):
         spec_dict
             spectrum dictionary
         """
-        psd_dict = defaultdict(dict)
-        spec_dict = defaultdict(dict)
+        psd_dict: DictType = defaultdict(dict)
+        spec_dict: DictType = defaultdict(dict)
         for chunk_index, signal_piece in enumerate(signal):
             # Plot spectrum using different methods
             psd_dict[chunk_index] = self.computing_multi_spectrum(signal_piece)
@@ -70,9 +74,9 @@ class SpectrumAnalysis(OperatorMixin):
 
         return psd_dict, spec_dict
 
-    def computing_multi_spectrum(self, signal):
+    def computing_multi_spectrum(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
         win = self.window_length_for_welch * signal.rate
-        psd_dict = defaultdict(dict)
+        psd_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
 
         for channel in range(signal.number_of_channels):
             if channel in self.exclude_channel_list:
@@ -95,8 +99,9 @@ class SpectrumAnalysis(OperatorMixin):
             }
         return psd_dict
 
-    def computing_spectrum(self, signal):
-        spec_dict = defaultdict(dict)
+    def computing_spectrum(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
+        spec_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
+
         nperseg = int(signal.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
         for channel in range(signal.number_of_channels):
@@ -111,7 +116,7 @@ class SpectrumAnalysis(OperatorMixin):
             }
         return spec_dict
 
-    def plot_spectrum_methods(self, output, input, show=False, save_path=None):
+    def plot_spectrum_methods(self, output, input, show: bool =False, save_path: Optional[pathlib.Path] =None):
         """
         Plot spectrum estimates using different methods (Periodogram, Welch, Multitaper).
 

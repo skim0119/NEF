@@ -7,11 +7,10 @@ from scipy import signal as sig
 from scipy.integrate import simpson
 from dataclasses import dataclass, field
 from collections import defaultdict
-from typing import List, Tuple, Dict, Any, Generator, Optional
+from typing import Tuple, Dict, Any, Generator, Optional
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
-from miv.typing import SignalType
 from miv.core.datatype import Signal
 from MultitaperPowerSpectrum import multitaper_psd
 
@@ -49,7 +48,7 @@ class PeriodogramAnalysis(OperatorMixin):
 
         Parameters:
         -----------
-        signal : SignalType
+        signal : Generator
             Input signal to be analyzed.
 
         Returns:

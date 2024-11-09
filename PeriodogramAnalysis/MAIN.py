@@ -34,6 +34,6 @@ data >> Periodogram_Analysis
 data >> Spectrum_Analysis
 pipeline1 = Pipeline(Periodogram_Analysis)
 pipeline2 = Pipeline(Spectrum_Analysis)
-pipeline1.run(working_directory="results/", verbose=True)
-# pipeline2.run(working_directory="results/", verbose=True)
+# pipeline1.run(working_directory="results/", verbose=True)
+pipeline2.run(working_directory="results/", verbose=True)
 
