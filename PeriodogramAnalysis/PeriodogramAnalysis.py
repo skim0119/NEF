@@ -12,6 +12,7 @@ from typing import Tuple, Dict, Any, Generator, Optional
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
 from miv.core.datatype import Signal
+from miv.typing import SignalType
 from MultitaperPowerSpectrum import multitaper_psd
 
 DictType = Dict[int, Dict[int, Dict[str, Any]]]
@@ -42,7 +43,7 @@ class PeriodogramAnalysis(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(self, signal: Generator[Signal, None, None]) -> Tuple[DictType, DictType]:
+    def __call__(self, signal: SignalType) -> Tuple[DictType, DictType]:
         """
         Perform the periodogram analysis on the given signal.
 
