@@ -22,15 +22,12 @@ jobs:
           pip install black mypy pytest pytest-cov
           
       - uses: psf/black@stable
-        continue-on-error: true
         with:
           options: "--check --verbose"
           src: "./PeriodogramAnalysis"
           use_pyproject: true
       - name: Run mypy type check
-        continue-on-error: true
         run: mypy --config-file pyproject.toml PeriodogramAnalysis
       - name: Run pytest coverage
-        continue-on-error: true
         run: |
           pytest --cov=PeriodogramAnalysis --cov-fail-under=80
