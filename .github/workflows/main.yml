@@ -23,9 +23,8 @@ jobs:
           
       - uses: psf/black@stable
         with:
-          options: "--check --verbose"
+          options: "--diff --check-only --settings-path pyproject.toml --verbose"
           src: "./PeriodogramAnalysis"
-          use_pyproject: true
       - name: Run mypy type check
         run: mypy --config-file pyproject.toml PeriodogramAnalysis
       - name: Run pytest coverage
