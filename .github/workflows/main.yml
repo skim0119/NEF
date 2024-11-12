@@ -16,16 +16,15 @@ jobs:
             path: ~/.cache/pip
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/ruff-action@v1
-        with:
-          args: "format --check"
-          src: "./PeriodogramAnalysis"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff mypy pytest pytest-cov
-      - name: Run ruff linter
-        run: ruff check PeriodogramAnalysis
+          pip install black mypy pytest pytest-cov
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./PeriodogramAnalysis"
+          use_pyproject: true
       - name: Run mypy type check
         run: mypy --config-file pyproject.toml PeriodogramAnalysis
       - name: Run pytest coverage
