@@ -2,7 +2,10 @@ import numpy as np
 from scipy.fft import rfft, rfftfreq
 from scipy.signal.windows import dpss
 
-def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, adaptive=True, low_bias=True):
+
+def multitaper_psd(
+    x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, adaptive=True, low_bias=True
+):
     """
     Compute multitaper power spectral density (PSD) of a given signal.
 
@@ -58,15 +61,25 @@ def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, adaptive=Tru
             var = np.var(sig)
             tol = 1e-10
             for _ in range(150):
-                weights = psd_iter / (eigvals[:, np.newaxis] * psd_iter + (1 - eigvals[:, np.newaxis]) * var)
+                weights = psd_iter / (
+                    eigvals[:, np.newaxis] * psd_iter
+                    + (1 - eigvals[:, np.newaxis]) * var
+                )
                 weights *= np.sqrt(eigvals)[:, np.newaxis]
-                psd_iter_new = np.sum(weights ** 2 * np.abs(x_mt) ** 2, axis=0) / np.sum(weights ** 2, axis=0)
+                psd_iter_new = np.sum(
+                    weights**2 * np.abs(x_mt) ** 2, axis=0
+                ) / np.sum(weights**2, axis=0)
                 if np.max(np.abs(psd_iter_new - psd_iter)) < tol:
                     break
                 psd_iter = psd_iter_new
             psd[i] = psd_iter
         else:
-            psd[i] = np.sum((np.sqrt(eigvals)[:, np.newaxis] ** 2) * np.abs(x_mt) ** 2, axis=0) / n_tapers
+            psd[i] = (
+                np.sum(
+                    (np.sqrt(eigvals)[:, np.newaxis] ** 2) * np.abs(x_mt) ** 2, axis=0
+                )
+                / n_tapers
+            )
 
     psd /= sfreq
     psd = psd.reshape(dshape + (n_freqs,))

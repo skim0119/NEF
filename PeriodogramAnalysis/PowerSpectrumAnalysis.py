@@ -16,6 +16,7 @@ from MultitaperPowerSpectrum import multitaper_psd
 
 DictType = Dict[int, Dict[int, Dict[str, Any]]]
 
+
 @dataclass
 class SpectrumAnalysis(OperatorMixin):
     """
@@ -36,9 +37,10 @@ class SpectrumAnalysis(OperatorMixin):
     noverlap : int
         Number of points to overlap between segments for spectrogram.
     """
+
     exclude_channel_list: list[int] = field(default_factory=list)
     band_display: list[float] = field(default_factory=lambda: [0, 100])
-    window_length_for_welch: float = 4
+    window_length_for_welch: int = 4
     frequency_limit: list[float] = field(default_factory=lambda: [0.5, 100])
     plotting_interval: list[float] = field(default_factory=lambda: [0, 60])
     nperseg_ratio: float = 0.25
@@ -83,7 +85,9 @@ class SpectrumAnalysis(OperatorMixin):
             if channel in self.exclude_channel_list:
                 continue
             freqs_per, psd_per = sig.periodogram(signal.data[:, channel], signal.rate)
-            freqs_welch, psd_welch = sig.welch(signal.data[:, channel], fs=signal.rate, nperseg=win)
+            freqs_welch, psd_welch = sig.welch(
+                signal.data[:, channel], fs=signal.rate, nperseg=win
+            )
             psd_mt, freqs_mt = multitaper_psd(signal.data[:, channel], signal.rate)
 
             psd_per = 10 * np.log10(psd_per)
@@ -91,12 +95,12 @@ class SpectrumAnalysis(OperatorMixin):
             psd_mt = 10 * np.log10(psd_mt)
 
             psd_dict[channel] = {
-                'freqs_per': freqs_per,
-                'freqs_welch': freqs_welch,
-                'freqs_mt': freqs_mt,
-                'psd_per': psd_per,
-                'psd_welch': psd_welch,
-                'psd_mt': psd_mt
+                "freqs_per": freqs_per,
+                "freqs_welch": freqs_welch,
+                "freqs_mt": freqs_mt,
+                "psd_per": psd_per,
+                "psd_welch": psd_welch,
+                "psd_mt": psd_mt,
             }
         return psd_dict
 
@@ -109,15 +113,23 @@ class SpectrumAnalysis(OperatorMixin):
             if channel in self.exclude_channel_list:
                 continue
             signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
-            frequencies, times, Sxx = sig.spectrogram(signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap)
+            frequencies, times, Sxx = sig.spectrogram(
+                signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap
+            )
             spec_dict[channel] = {
-                'frequencies': frequencies,
-                'times': times,
-                'Sxx': Sxx
+                "frequencies": frequencies,
+                "times": times,
+                "Sxx": Sxx,
             }
         return spec_dict
 
-    def plot_spectrum_methods(self, output, input, show: bool =False, save_path: Optional[pathlib.Path] =None):
+    def plot_spectrum_methods(
+        self,
+        output,
+        input,
+        show: bool = False,
+        save_path: Optional[pathlib.Path] = None,
+    ):
         """
         Plot spectrum estimates using different methods (Periodogram, Welch, Multitaper).
 
@@ -135,20 +147,35 @@ class SpectrumAnalysis(OperatorMixin):
         for chunk in psd_dict.keys():
             for channel in psd_dict[chunk].keys():
 
-                fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4), sharex=True, sharey=True)
-                sc = 'slategrey'
-                ax1.stem(psd_dict[chunk][channel]['freqs_per'], psd_dict[chunk][channel]['psd_per'], linefmt=sc, basefmt=" ", markerfmt=" ")
-                ax2.stem(psd_dict[chunk][channel]['freqs_welch'], psd_dict[chunk][channel]['psd_welch'], linefmt=sc, basefmt=" ", markerfmt=" ")
-                ax3.stem(psd_dict[chunk][channel]['freqs_mt'], psd_dict[chunk][channel]['psd_mt'], linefmt=sc, basefmt=" ", markerfmt=" ")
-                lc, lw = 'k', 2
-                ax1.plot(psd_dict[chunk][channel]['freqs_per'], psd_dict[chunk][channel]['psd_per'], lw=lw, color=lc)
-                ax2.plot(psd_dict[chunk][channel]['freqs_welch'], psd_dict[chunk][channel]['psd_welch'], lw=lw, color=lc)
-                ax3.plot(psd_dict[chunk][channel]['freqs_mt'], psd_dict[chunk][channel]['psd_mt'], lw=lw, color=lc)
-                ax1.set_xlabel('Frequency (Hz)')
-                ax1.set_ylabel('Decibels (dB / Hz)')
-                ax1.set_title('Periodogram')
-                ax2.set_title('Welch')
-                ax3.set_title('Multitaper')
+                fig, (ax1, ax2, ax3) = plt.subplots(
+                    1, 3, figsize=(12, 4), sharex=True, sharey=True
+                )
+
+                psd = [
+                    (ax1, "freqs_per", "psd_per"),
+                    (ax2, "freqs_welch", "psd_welch"),
+                    (ax3, "freqs_mt", "psd_mt")
+                ]
+                for ax, fregs_type, psd_type in psd:
+                    ax.stem(
+                        psd_dict[chunk][channel][fregs_type],
+                        psd_dict[chunk][channel][psd_type],
+                        linefmt="slategrey",
+                        basefmt=" ",
+                        markerfmt=" ",
+                    )
+                    ax.plot(
+                        psd_dict[chunk][channel][fregs_type],
+                        psd_dict[chunk][channel][psd_type],
+                        lw=2,
+                        color="k",
+                    )
+
+                ax1.set_xlabel("Frequency (Hz)")
+                ax1.set_ylabel("Decibels (dB / Hz)")
+                ax1.set_title("Periodogram")
+                ax2.set_title("Welch")
+                ax3.set_title("Multitaper")
                 ax1.set_xlim(self.band_display)
 
                 ax1.set_ylim(ymin=0)
@@ -157,7 +184,10 @@ class SpectrumAnalysis(OperatorMixin):
                 if show:
                     plt.show()
                 if save_path is not None:
-                    plot_path = os.path.join(save_path, f"Chunk{chunk}_Comparison_figure_channel_{channel}.png")
+                    plot_path = os.path.join(
+                        save_path,
+                        f"Chunk{chunk}_Comparison_figure_channel_{channel}.png",
+                    )
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
@@ -180,33 +210,55 @@ class SpectrumAnalysis(OperatorMixin):
             for channel in spec_dict[chunk].keys():
 
                 spectrogram_data = spec_dict[chunk][channel]
-                frequencies = spectrogram_data['frequencies']
-                times = spectrogram_data['times']
-                Sxx = spectrogram_data['Sxx']
+                frequencies = spectrogram_data["frequencies"]
+                times = spectrogram_data["times"]
+                Sxx = spectrogram_data["Sxx"]
                 Sxx = np.maximum(Sxx, 1e-2)
                 Sxx_log = 10 * np.log10(Sxx)
 
                 fig, ax = plt.subplots(2, 1, figsize=(14, 12))
 
-                cax1 = ax[0].pcolormesh(times, frequencies, Sxx_log, shading='gouraud', cmap='inferno')
-                ax[0].set_title('Spectrogram')
-                ax[0].set_xlabel('Time (s)')
-                ax[0].set_ylabel('Frequency (Hz)')
+                cax1 = ax[0].pcolormesh(
+                    times, frequencies, Sxx_log, shading="gouraud", cmap="inferno"
+                )
+                ax[0].set_title("Spectrogram")
+                ax[0].set_xlabel("Time (s)")
+                ax[0].set_ylabel("Frequency (Hz)")
                 ax[0].set_ylim(self.frequency_limit)
                 ax[0].set_xlim(self.plotting_interval)
                 for freq in [4, 8, 12, 30]:
-                    ax[0].axhline(y=freq, color='black', linestyle='--', linewidth=1, label=f'{freq} Hz')
+                    ax[0].axhline(
+                        y=freq,
+                        color="black",
+                        linestyle="--",
+                        linewidth=1,
+                        label=f"{freq} Hz",
+                    )
 
-                cax2 = ax[1].pcolormesh(times, frequencies, Sxx_log, shading='gouraud', cmap='inferno')
-                ax[1].set_xlabel('Time (s)')
-                ax[1].set_ylabel('Frequency (Hz)')
+                cax2 = ax[1].pcolormesh(
+                    times, frequencies, Sxx_log, shading="gouraud", cmap="inferno"
+                )
+                ax[1].set_xlabel("Time (s)")
+                ax[1].set_ylabel("Frequency (Hz)")
                 ax[1].set_ylim([0, 12])
                 ax[1].set_xlim(self.plotting_interval)
                 for freq in [4, 8, 12, 30]:
-                    ax[1].axhline(y=freq, color='black', linestyle='--', linewidth=1, label=f'{freq} Hz')
+                    ax[1].axhline(
+                        y=freq,
+                        color="black",
+                        linestyle="--",
+                        linewidth=1,
+                        label=f"{freq} Hz",
+                    )
 
-                fig.colorbar(cax1, ax=ax[:], location='right', label='Power spectral density (dB/Hz)', fraction=0.02,
-                             pad=0.04)
+                fig.colorbar(
+                    cax1,
+                    ax=ax[:],
+                    location="right",
+                    label="Power spectral density (dB/Hz)",
+                    fraction=0.02,
+                    pad=0.04,
+                )
 
                 # If Histogram is needed
                 # psd_values = Sxx_log.flatten()
@@ -218,7 +270,8 @@ class SpectrumAnalysis(OperatorMixin):
                 if show:
                     plt.show()
                 if save_path is not None:
-                    plot_path = os.path.join(save_path, f'Chunk{chunk}_Spectrogram_Channel_{channel}.png')
+                    plot_path = os.path.join(
+                        save_path, f"Chunk{chunk}_Spectrogram_Channel_{channel}.png"
+                    )
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
-
