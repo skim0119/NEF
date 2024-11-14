@@ -24,8 +24,6 @@ class SpectrumAnalysis(OperatorMixin):
 
     Attributes:
     -----------
-    exclude_channel_list : list
-        Channels to be excluded from analysis.
     band_display : list
         Frequency band range to display in spectrum comparison plots.
     window_length_for_welch : float
@@ -38,7 +36,6 @@ class SpectrumAnalysis(OperatorMixin):
         Number of points to overlap between segments for spectrogram.
     """
 
-    exclude_channel_list: list[int] = field(default_factory=list)
     band_display: list[float] = field(default_factory=lambda: [0, 100])
     window_length_for_welch: int = 4
     frequency_limit: list[float] = field(default_factory=lambda: [0.5, 100])
@@ -82,8 +79,6 @@ class SpectrumAnalysis(OperatorMixin):
         psd_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
 
         for channel in range(signal.number_of_channels):
-            if channel in self.exclude_channel_list:
-                continue
             freqs_per, psd_per = sig.periodogram(signal.data[:, channel], signal.rate)
             freqs_welch, psd_welch = sig.welch(
                 signal.data[:, channel], fs=signal.rate, nperseg=win
@@ -110,8 +105,6 @@ class SpectrumAnalysis(OperatorMixin):
         nperseg = int(signal.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
         for channel in range(signal.number_of_channels):
-            if channel in self.exclude_channel_list:
-                continue
             signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
             frequencies, times, Sxx = sig.spectrogram(
                 signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap

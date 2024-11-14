@@ -26,15 +26,12 @@ class PeriodogramAnalysis(OperatorMixin):
 
     Attributes:
     -----------
-    exclude_channel_list : list
-        Channels to be excluded from analysis.
     band_list : list
         Frequency bands to analyze, default is [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]], i.e. the five common frequency bands in EEG.
     window_length_for_welch : float
         Window length in seconds for Welch's method.
     """
 
-    exclude_channel_list: list = field(default_factory=list)
     band_list: tuple = ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100))
     window_length_for_welch: int = 4
 
@@ -92,8 +89,6 @@ class PeriodogramAnalysis(OperatorMixin):
         psd_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
 
         for channel in range(signal.number_of_channels):
-            if channel in self.exclude_channel_list:
-                continue
             signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
             freqs, psd = sig.welch(
                 signal_no_bias, fs=signal.rate, nperseg=win, nfft=4 * win
@@ -273,9 +268,6 @@ class PeriodogramAnalysis(OperatorMixin):
             Dictionary containing power values for each chunk and channel.
         """
         for channel in range(signal.number_of_channels):
-            if channel in self.exclude_channel_list:
-                continue
-
             self.logger.info(f"Analysis of chunk {chunk_index}, channel {channel}\n")
 
             band_names = ["delta", "theta", "alpha", "beta", "gamma"]
