@@ -47,11 +47,11 @@ class SpectrumAnalysis(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(
-        self, signal: SignalType
-    ) -> Tuple[
-        Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]],
-        Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]]
+    def __call__(self, signal: SignalType) -> Tuple[
+        Dict[int, Dict[int, Dict[str, Any]]],
+        Dict[int, Dict[int, Dict[str, Any]]],
+        Dict[int, Dict[int, Dict[str, Any]]],
+        Dict[int, Dict[int, Dict[str, Any]]],
     ]:
         """
         Perform spectrum analysis on the given signal using multiple methods.
@@ -73,12 +73,20 @@ class SpectrumAnalysis(OperatorMixin):
         psd_multitaper_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         spec_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
 
-        periodogramanalysis = PeriodogramAnalysis(window_length_for_welch = self.window_length_for_welch)
+        periodogramanalysis = PeriodogramAnalysis(
+            window_length_for_welch=self.window_length_for_welch
+        )
         for chunk_index, signal_piece in enumerate(signal):
             # Plot spectrum using different methods
-            psd_welch_dict[chunk_index] = periodogramanalysis.SpectrumAnalysisWelch(signal_piece)
-            psd_periodogram_dict[chunk_index] = periodogramanalysis.SpectrumAnalysisPeriodogram(signal_piece)
-            psd_multitaper_dict[chunk_index] = periodogramanalysis.SpectrumAnalysisMultitaper(signal_piece)
+            psd_welch_dict[chunk_index] = periodogramanalysis.SpectrumAnalysisWelch(
+                signal_piece
+            )
+            psd_periodogram_dict[chunk_index] = (
+                periodogramanalysis.SpectrumAnalysisPeriodogram(signal_piece)
+            )
+            psd_multitaper_dict[chunk_index] = (
+                periodogramanalysis.SpectrumAnalysisMultitaper(signal_piece)
+            )
             # Plot spectrogram
             spec_dict[chunk_index] = self.computing_spectrum(signal_piece)
 

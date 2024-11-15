@@ -39,7 +39,11 @@ class PeriodogramAnalysis(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(self, signal: SignalType) -> Tuple[Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]]]:
+    def __call__(
+        self, signal: SignalType
+    ) -> Tuple[
+        Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]]
+    ]:
         """
         Perform the periodogram analysis on the given signal.
 
@@ -253,7 +257,7 @@ class PeriodogramAnalysis(OperatorMixin):
                     ("idx_theta", "lightseagreen", "Theta (4-8 Hz)"),
                     ("idx_alpha", "goldenrod", "Alpha (8-12 Hz)"),
                     ("idx_beta", "deeppink", "Beta (12-30 Hz)"),
-                    ("idx_gamma", "khaki", "Gamma (30-100 Hz)")
+                    ("idx_gamma", "khaki", "Gamma (30-100 Hz)"),
                 ]
 
                 ax1.semilogx(freqs, psd, lw=1.5, color="k")
@@ -266,7 +270,7 @@ class PeriodogramAnalysis(OperatorMixin):
                         psd,
                         where=power_dict[chunk][channel][bands_name],
                         color=color,
-                        label=label
+                        label=label,
                     )
                 ax1.set_ylim([0, np.max(psd) * 1.1])
                 ax1.set_xlim([1e-1, 100])
@@ -281,7 +285,7 @@ class PeriodogramAnalysis(OperatorMixin):
                         psd,
                         where=power_dict[chunk][channel][bands_name],
                         color=color,
-                        label=label
+                        label=label,
                     )
                 ax2.set_ylim([0, np.max(psd) * 1.1])
                 ax2.set_xlim([0, 100])
@@ -298,7 +302,10 @@ class PeriodogramAnalysis(OperatorMixin):
                 plt.close()
 
     def computing_ratio_and_bandpower(
-        self, signal: Signal, power_dict: Dict[int, Dict[int, Dict[str, Any]]], chunk_index: int
+        self,
+        signal: Signal,
+        power_dict: Dict[int, Dict[int, Dict[str, Any]]],
+        chunk_index: int,
     ):
         """
         Compute power ratios and band powers for specific bands using Welch's and multitaper methods.
