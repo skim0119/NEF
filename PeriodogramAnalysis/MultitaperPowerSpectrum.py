@@ -8,6 +8,7 @@ def multitaper_psd(
 ):
     """
     Compute multitaper power spectral density (PSD) of a given signal.
+    Parts of this code is inspired from MNE: https://mne.tools/stable/index.html
 
     Parameters:
     -----------

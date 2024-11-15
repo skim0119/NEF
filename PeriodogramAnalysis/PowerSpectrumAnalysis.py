@@ -35,10 +35,10 @@ class SpectrumAnalysis(OperatorMixin):
         Number of points to overlap between segments for spectrogram.
     """
 
-    band_display: list[float] = field(default_factory=lambda: [0, 100])
+    band_display: Tuple[float, float] = field(default_factory=lambda: [0, 100])
     window_length_for_welch: int = 4
-    frequency_limit: list[float] = field(default_factory=lambda: [0.5, 100])
-    plotting_interval: list[float] = field(default_factory=lambda: [0, 60])
+    frequency_limit: Tuple[float, float] = field(default_factory=lambda: [0.5, 100])
+    plotting_interval: Tuple[float, float] = field(default_factory=lambda: [0, 60])
     nperseg_ratio: float = 0.25
 
     tag = "Spectrum_Analysis"
