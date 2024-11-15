@@ -134,7 +134,6 @@ class PeriodogramAnalysis(OperatorMixin):
         psd_multitaper_dict
             Dictionary containing PSD values for all channels in this chunk.
         """
-        win = self.window_length_for_welch * signal.rate
         psd_multitaper_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
 
         for channel in range(signal.number_of_channels):
