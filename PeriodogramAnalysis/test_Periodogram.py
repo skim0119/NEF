@@ -148,28 +148,29 @@ def test_SpectrumAnalysis_call():
     )
 
     signal = list(mock_power_generator())
-    psd_dict, spec_dict = Spectrum_Analysis(signal)
+    psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict = Spectrum_Analysis(signal)
 
     # Check the output are both dicts
-    assert isinstance(psd_dict, dict)
+    assert isinstance(psd_welch_dict, dict)
+    assert isinstance(psd_periodogram_dict, dict)
+    assert isinstance(psd_multitaper_dict, dict)
     assert isinstance(spec_dict, dict)
 
     # Check that all chunks are in the dicts
     for chunk_idx in range(len(signal)):
-        assert chunk_idx in psd_dict.keys()
+        assert chunk_idx in psd_welch_dict.keys()
+        assert chunk_idx in psd_periodogram_dict.keys()
+        assert chunk_idx in psd_multitaper_dict.keys()
         assert chunk_idx in spec_dict.keys()
 
         # Check PSD dict and spec dict contains needed channels only, and has needed data
         for channel in range(10):
-            assert channel in psd_dict[chunk_idx]
-            required_keys_psd = [
-                'freqs_per', 'freqs_welch', 'freqs_mt', 'psd_per',
-                'psd_welch', 'psd_mt'
-            ]
-            for key in required_keys_psd:
-                assert key in psd_dict[chunk_idx][channel]
+            dict_list = [psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict]
+            required_keys_psd = ['freqs', 'psd']
+            for psd_dict in dict_list:
+                for key in required_keys_psd:
+                    assert key in psd_dict[chunk_idx][channel]
 
-            assert channel in spec_dict[chunk_idx]
             required_keys_spec = ['frequencies', 'times', 'Sxx']
             for key in required_keys_spec:
                 assert key in spec_dict[chunk_idx][channel]
@@ -189,28 +190,28 @@ def test_SpectrumAnalysis_call_default():
 def test_plot_spectrum_methods(tmp_path):
     Spectrum_Analysis = SpectrumAnalysis()
     signal = list(mock_power_generator())
-    psd_dict, spec_dict = Spectrum_Analysis(signal)
-    output = (psd_dict, spec_dict)
+    psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict = Spectrum_Analysis(signal)
+    output = (psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict)
 
     Spectrum_Analysis.plot_spectrum_methods(output, signal, show=False, save_path=tmp_path)
 
     # Check if plots are saved correctly for each chunk and channel
-    for chunk in psd_dict.keys():
-        for channel in psd_dict[chunk].keys():
+    for chunk in spec_dict.keys():
+        for channel in spec_dict[chunk].keys():
             plot_file = tmp_path / f"Chunk{chunk}_Comparison_figure_channel_{channel}.png"
             assert plot_file.exists()
 
 def test_plot_spectrogram(tmp_path):
     Spectrum_Analysis = SpectrumAnalysis()
     signal = list(mock_power_generator())
-    psd_dict, spec_dict = Spectrum_Analysis(signal)
-    output = (psd_dict, spec_dict)
+    psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict = Spectrum_Analysis(signal)
+    output = (psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict)
 
     Spectrum_Analysis.plot_spectrogram(output, signal, show=False, save_path=tmp_path)
 
     # Check if plots are saved correctly for each chunk and channel
-    for chunk in psd_dict.keys():
-        for channel in psd_dict[chunk].keys():
+    for chunk in spec_dict.keys():
+        for channel in spec_dict[chunk].keys():
             plot_file = tmp_path / f'Chunk{chunk}_Spectrogram_Channel_{channel}.png'
             assert plot_file.exists()
 
