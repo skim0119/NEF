@@ -14,8 +14,6 @@ from miv.core.datatype import Signal
 from miv.typing import SignalType
 from MultitaperPowerSpectrum import multitaper_psd
 
-DictType = Dict[int, Dict[int, Dict[str, Any]]]
-
 
 @dataclass
 class SpectrumAnalysis(OperatorMixin):
@@ -51,7 +49,11 @@ class SpectrumAnalysis(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(self, signal: SignalType) -> Tuple[DictType, DictType]:
+    def __call__(
+        self, signal: SignalType
+    ) -> Tuple[
+        Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]]
+    ]:
         """
         Perform spectrum analysis on the given signal using multiple methods.
 
@@ -67,8 +69,8 @@ class SpectrumAnalysis(OperatorMixin):
         spec_dict
             spectrum dictionary
         """
-        psd_dict: DictType = defaultdict(dict)
-        spec_dict: DictType = defaultdict(dict)
+        psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+        spec_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_index, signal_piece in enumerate(signal):
             # Plot spectrum using different methods
             psd_dict[chunk_index] = self.computing_multi_spectrum(signal_piece)
@@ -154,7 +156,7 @@ class SpectrumAnalysis(OperatorMixin):
                 psd = [
                     (ax1, "freqs_per", "psd_per"),
                     (ax2, "freqs_welch", "psd_welch"),
-                    (ax3, "freqs_mt", "psd_mt")
+                    (ax3, "freqs_mt", "psd_mt"),
                 ]
                 for ax, fregs_type, psd_type in psd:
                     ax.stem(

@@ -29,7 +29,6 @@ Spectrum_Analysis = SpectrumAnalysis(
         band_display = [0, 5]
     )
 
-bandpass_filter: Operator = ButterBandpass(lowcut=0.2, highcut=200, order=4, tag="bandpass")
 data >> Periodogram_Analysis
 data >> Spectrum_Analysis
 pipeline1 = Pipeline(Periodogram_Analysis)

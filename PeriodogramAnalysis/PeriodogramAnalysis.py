@@ -15,8 +15,6 @@ from miv.core.datatype import Signal
 from miv.typing import SignalType
 from MultitaperPowerSpectrum import multitaper_psd
 
-DictType = Dict[int, Dict[int, Dict[str, Any]]]
-
 
 @dataclass
 class PeriodogramAnalysis(OperatorMixin):
@@ -44,7 +42,7 @@ class PeriodogramAnalysis(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(self, signal: SignalType) -> Tuple[DictType, DictType]:
+    def __call__(self, signal: SignalType) -> Tuple[Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]]]:
         """
         Perform the periodogram analysis on the given signal.
 
@@ -60,8 +58,8 @@ class PeriodogramAnalysis(OperatorMixin):
         power_dict
             power dictionary
         """
-        psd_dict: DictType = defaultdict(dict)
-        power_dict: DictType = defaultdict(dict)
+        psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+        power_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
             # Compute psd_dict and power_dict for welch_periodogram plotting
             psd_dict[chunk_idx] = self.computing_welch_periodogram(signal_piece)
@@ -260,7 +258,7 @@ class PeriodogramAnalysis(OperatorMixin):
                 plt.close()
 
     def computing_ratio_and_bandpower(
-        self, signal: Signal, power_dict: DictType, chunk_index: int
+        self, signal: Signal, power_dict: Dict[int, Dict[int, Dict[str, Any]]], chunk_index: int
     ):
         """
         Compute power ratios and band powers for specific bands using Welch's and multitaper methods.
