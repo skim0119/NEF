@@ -59,7 +59,7 @@ class PeriodogramAnalysis(OperatorMixin):
         power_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
             # Compute psd_dict and power_dict for welch_periodogram plotting
-            psd_dict[chunk_idx] = self.computing_welch_periodogram(signal_piece)
+            psd_dict[chunk_idx] = self.SpectrumAnalysisWelch(signal_piece)
             power_dict[chunk_idx] = self.computing_absolute_and_relative_power(
                 psd_dict[chunk_idx]
             )
@@ -69,7 +69,7 @@ class PeriodogramAnalysis(OperatorMixin):
 
         return psd_dict, power_dict
 
-    def computing_welch_periodogram(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
+    def SpectrumAnalysisWelch(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
         """
         Compute Welch's periodogram for the signal.
 
@@ -80,19 +80,64 @@ class PeriodogramAnalysis(OperatorMixin):
 
         Returns:
         --------
-        psd_dict
+        psd_welch_dict
             Dictionary containing PSD values for all channels in this chunk.
         """
         win = self.window_length_for_welch * signal.rate
-        psd_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
+        psd_welch_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
 
         for channel in range(signal.number_of_channels):
             signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
             freqs, psd = sig.welch(
                 signal_no_bias, fs=signal.rate, nperseg=win, nfft=4 * win
             )
-            psd_dict[channel] = {"freqs": freqs, "psd": psd}
-        return psd_dict
+            psd_welch_dict[channel] = {"freqs": freqs, "psd": psd}
+        return psd_welch_dict
+
+    def SpectrumAnalysisPeriodogram(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
+        """
+        Compute Welch's periodogram for the signal.
+
+        Parameters:
+        -----------
+        signal : SignalType
+            Input signal to be analyzed.
+
+        Returns:
+        --------
+        psd_periodogram_dict
+            Dictionary containing PSD values for all channels in this chunk.
+        """
+        psd_periodogram_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
+
+        for channel in range(signal.number_of_channels):
+            signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
+            freqs, psd = sig.periodogram(signal_no_bias, signal.rate)
+            psd_periodogram_dict[channel] = {"freqs": freqs, "psd": psd}
+        return psd_periodogram_dict
+
+    def SpectrumAnalysisMultitaper(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
+        """
+        Compute Welch's periodogram for the signal.
+
+        Parameters:
+        -----------
+        signal : SignalType
+            Input signal to be analyzed.
+
+        Returns:
+        --------
+        psd_multitaper_dict
+            Dictionary containing PSD values for all channels in this chunk.
+        """
+        win = self.window_length_for_welch * signal.rate
+        psd_multitaper_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
+
+        for channel in range(signal.number_of_channels):
+            signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
+            psd, freqs = multitaper_psd(signal_no_bias, signal.rate)
+            psd_multitaper_dict[channel] = {"freqs": freqs, "psd": psd}
+        return psd_multitaper_dict
 
     def computing_absolute_and_relative_power(
         self, psd_dict: Dict[int, Dict[str, Any]]

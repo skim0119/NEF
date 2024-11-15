@@ -13,6 +13,7 @@ from miv.core.operator.wrapper import cache_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
 from MultitaperPowerSpectrum import multitaper_psd
+from PeriodogramAnalysis import PeriodogramAnalysis
 
 
 @dataclass
@@ -49,6 +50,7 @@ class SpectrumAnalysis(OperatorMixin):
     def __call__(
         self, signal: SignalType
     ) -> Tuple[
+        Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]],
         Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]]
     ]:
         """
@@ -66,40 +68,21 @@ class SpectrumAnalysis(OperatorMixin):
         spec_dict
             spectrum dictionary
         """
-        psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+        psd_welch_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+        psd_periodogram_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+        psd_multitaper_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         spec_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+
+        periodogramanalysis = PeriodogramAnalysis(window_length_for_welch = self.window_length_for_welch)
         for chunk_index, signal_piece in enumerate(signal):
             # Plot spectrum using different methods
-            psd_dict[chunk_index] = self.computing_multi_spectrum(signal_piece)
+            psd_welch_dict[chunk_index] = periodogramanalysis.SpectrumAnalysisWelch(signal_piece)
+            psd_periodogram_dict[chunk_index] = periodogramanalysis.SpectrumAnalysisPeriodogram(signal_piece)
+            psd_multitaper_dict[chunk_index] = periodogramanalysis.SpectrumAnalysisMultitaper(signal_piece)
             # Plot spectrogram
             spec_dict[chunk_index] = self.computing_spectrum(signal_piece)
 
-        return psd_dict, spec_dict
-
-    def computing_multi_spectrum(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
-        win = self.window_length_for_welch * signal.rate
-        psd_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
-
-        for channel in range(signal.number_of_channels):
-            freqs_per, psd_per = sig.periodogram(signal.data[:, channel], signal.rate)
-            freqs_welch, psd_welch = sig.welch(
-                signal.data[:, channel], fs=signal.rate, nperseg=win
-            )
-            psd_mt, freqs_mt = multitaper_psd(signal.data[:, channel], signal.rate)
-
-            psd_per = 10 * np.log10(psd_per)
-            psd_welch = 10 * np.log10(psd_welch)
-            psd_mt = 10 * np.log10(psd_mt)
-
-            psd_dict[channel] = {
-                "freqs_per": freqs_per,
-                "freqs_welch": freqs_welch,
-                "freqs_mt": freqs_mt,
-                "psd_per": psd_per,
-                "psd_welch": psd_welch,
-                "psd_mt": psd_mt,
-            }
-        return psd_dict
+        return psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict
 
     def computing_spectrum(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
         spec_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
@@ -137,21 +120,23 @@ class SpectrumAnalysis(OperatorMixin):
         save_path : str, optional (default=None)
             If provided, the plot will be saved to the given path with filenames indicating the chunk and channel.
         """
-        psd_dict = output[0]
+        psd_welch_dict = output[0]
+        psd_periodogram_dict = output[1]
+        psd_multitaper_dict = output[2]
 
-        for chunk in psd_dict.keys():
-            for channel in psd_dict[chunk].keys():
+        for chunk in psd_welch_dict.keys():
+            for channel in psd_welch_dict[chunk].keys():
 
                 fig, (ax1, ax2, ax3) = plt.subplots(
                     1, 3, figsize=(12, 4), sharex=True, sharey=True
                 )
 
                 psd = [
-                    (ax1, "freqs_per", "psd_per"),
-                    (ax2, "freqs_welch", "psd_welch"),
-                    (ax3, "freqs_mt", "psd_mt"),
+                    (ax1, psd_periodogram_dict, "freqs", "psd"),
+                    (ax2, psd_welch_dict, "freqs", "psd"),
+                    (ax3, psd_multitaper_dict, "freqs", "psd"),
                 ]
-                for ax, fregs_type, psd_type in psd:
+                for ax, psd_dict, fregs_type, psd_type in psd:
                     ax.stem(
                         psd_dict[chunk][channel][fregs_type],
                         psd_dict[chunk][channel][psd_type],
@@ -199,7 +184,7 @@ class SpectrumAnalysis(OperatorMixin):
         save_path : str, optional (default=None)
             If provided, the spectrogram plot will be saved to the given path with filenames indicating the chunk and channel.
         """
-        spec_dict = output[1]
+        spec_dict = output[3]
 
         for chunk in spec_dict.keys():
             for channel in spec_dict[chunk].keys():
