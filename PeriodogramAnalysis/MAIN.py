@@ -2,7 +2,7 @@ from miv.core.operator import DataLoader
 from miv.io.openephys import DataManager
 from miv.core.pipeline import Pipeline
 from PeriodogramAnalysis import PowerSpectrumAnalysis
-from PowerSpectrumAnalysis import SpectrumAnalysis
+from PowerSpectrumAnalysis import SpectrogramAnalysis
 from miv.datasets.openephys_sample import load_data
 from miv.signal.filter import ButterBandpass, MedianFilter
 from miv.core.operator import Operator, DataLoader
@@ -23,22 +23,19 @@ Periodogram_Analysis = PowerSpectrumAnalysis(
         window_length_for_welch=4
     )
 
-Spectrum_Analysis = SpectrumAnalysis(
+Spectrum_Analysis = SpectrogramAnalysis(
         window_length_for_welch=4,
         frequency_limit=[0.5, 100],
         band_display = [0, 5]
     )
 
-data >> spectrum_per >> Periodogram_Analysis
-# data >> spectrum_per
-# data >> spectrum_mul
-pipeline1 = Pipeline(Periodogram_Analysis)
-# pipeline2 = Pipeline(spectrum_per)
-# pipeline3 = Pipeline(spectrum_mul)
-pipeline1.run(working_directory=working_directory, verbose=True)
-# pipeline2.run(working_directory=working_directory, verbose=True)
-# pipeline3.run(working_directory=working_directory, verbose=True)
+# data >> spectrum_per >> Periodogram_Analysis
+# pipeline1 = Pipeline(Periodogram_Analysis)
+# pipeline1.run(working_directory=working_directory, verbose=True)
 
+data >> Spectrum_Analysis
+pipeline2 = Pipeline(Spectrum_Analysis)
+pipeline2.run(working_directory=working_directory, verbose=True)
 
 # data >> Periodogram_Analysis
 # data >> Spectrum_Analysis

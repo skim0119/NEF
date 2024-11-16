@@ -31,9 +31,6 @@ class SpectrumAnalysisWelch(OperatorMixin):
 
         psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            if chunk_idx > 1:
-                break
-            signal_piece.data = signal_piece.data[:, [2, 3]]
             psd_dict[chunk_idx] = self.spectrum_analysis_welch(signal_piece)
 
         return psd_dict
@@ -119,9 +116,6 @@ class SpectrumAnalysisPeriodogram(OperatorMixin):
 
         psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            if chunk_idx >= 1:
-                break
-            signal_piece.data = signal_piece.data[:, [2]]
             psd_dict[chunk_idx] = self.spectrum_analysis_periodogram(signal_piece)
 
         return psd_dict
@@ -203,16 +197,13 @@ class SpectrumAnalysisMultitaper(OperatorMixin):
 
         psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            if chunk_idx >= 1:
-                break
-            signal_piece.data = signal_piece.data[:, [2]]
             psd_dict[chunk_idx] = self.spectrum_analysis_multitaper(signal_piece)
 
         return psd_dict
 
     def spectrum_analysis_multitaper(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
         """
-        Compute Welch's periodogram for the signal.
+        Compute PSD using multitaper method for the signal.
 
         Parameters:
         -----------

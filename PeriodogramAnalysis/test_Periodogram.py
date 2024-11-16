@@ -1,8 +1,8 @@
 import numpy as np
 
 from miv.core.datatype import Signal
-from PeriodogramAnalysis import PeriodogramAnalysis
-from PowerSpectrumAnalysis import SpectrumAnalysis
+from PeriodogramAnalysis import PowerSpectrumAnalysis
+from PowerSpectrumAnalysis import SpectrogramAnalysis
 
 def mock_power():
     data = np.random.rand(30000, 10)  # Mock data with 30,000 samples and 5 channels
@@ -26,7 +26,7 @@ def mock_power_generator():
 
 
 def test_periodogram_analysis_call():
-    analysis = PeriodogramAnalysis(window_length_for_welch=2)
+    analysis = PowerSpectrumAnalysis(window_length_for_welch=2)
 
     signal = list(mock_power_generator())
     psd_dict, power_dict = analysis(signal)
@@ -56,7 +56,7 @@ def test_periodogram_analysis_call():
                 assert key in power_dict[chunk_idx][channel]
 
 def test_periodogram_analysis_call_default():
-    analysis = PeriodogramAnalysis()
+    analysis = PowerSpectrumAnalysis()
 
     signal = list(mock_power_generator())
     analysis(signal)
@@ -67,8 +67,8 @@ def test_periodogram_analysis_call_default():
 
 def test_computing_ratio_and_bandpower(mocker):
     signal = list(mock_power_generator())
-    analysis = PeriodogramAnalysis(window_length_for_welch=2)
-    analysis2 = PeriodogramAnalysis(window_length_for_welch=2, band_list=((0.5, 4), (4, 8)))
+    analysis = PowerSpectrumAnalysis(window_length_for_welch=2)
+    analysis2 = PowerSpectrumAnalysis(window_length_for_welch=2, band_list=((0.5, 4), (4, 8)))
 
     psd_dict, power_dict = analysis(signal)
     logger_info_spy = mocker.spy(analysis.logger, 'info')
@@ -86,7 +86,7 @@ def test_computing_ratio_and_bandpower(mocker):
 
 
 def test_computing_multitaper_bandpower():
-    analysis = PeriodogramAnalysis(window_length_for_welch=2)
+    analysis = PowerSpectrumAnalysis(window_length_for_welch=2)
     signal = mock_power()
     band = [8, 12]  # Alpha band
     channel = 0
@@ -106,7 +106,7 @@ def test_computing_multitaper_bandpower():
 
 
 def test_computing_welch_bandpower():
-    analysis = PeriodogramAnalysis(window_length_for_welch=2)
+    analysis = PowerSpectrumAnalysis(window_length_for_welch=2)
     signal = mock_power()
     band = [8, 12]  # Alpha band
     channel = 0
@@ -126,7 +126,7 @@ def test_computing_welch_bandpower():
 
 
 def test_plot_welch_periodogram(tmp_path):
-    analysis = PeriodogramAnalysis(window_length_for_welch=2)
+    analysis = PowerSpectrumAnalysis(window_length_for_welch=2)
     signal = list(mock_power_generator())
     psd_dict, power_dict = analysis(signal)
     output = (psd_dict, power_dict)
@@ -141,7 +141,7 @@ def test_plot_welch_periodogram(tmp_path):
 
 
 def test_SpectrumAnalysis_call():
-    Spectrum_Analysis = SpectrumAnalysis(
+    Spectrum_Analysis = SpectrogramAnalysis(
         frequency_limit=[0, 10],
         window_length_for_welch=4,
         band_display=[0, 5]
@@ -176,7 +176,7 @@ def test_SpectrumAnalysis_call():
                 assert key in spec_dict[chunk_idx][channel]
 
 def test_SpectrumAnalysis_call_default():
-    Spectrum_Analysis = SpectrumAnalysis()
+    Spectrum_Analysis = SpectrogramAnalysis()
 
     signal = list(mock_power_generator())
     Spectrum_Analysis(signal)
@@ -188,7 +188,7 @@ def test_SpectrumAnalysis_call_default():
     assert Spectrum_Analysis.nperseg_ratio == 0.25
 
 def test_plot_spectrum_methods(tmp_path):
-    Spectrum_Analysis = SpectrumAnalysis()
+    Spectrum_Analysis = SpectrogramAnalysis()
     signal = list(mock_power_generator())
     psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict = Spectrum_Analysis(signal)
     output = (psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict)
@@ -202,7 +202,7 @@ def test_plot_spectrum_methods(tmp_path):
             assert plot_file.exists()
 
 def test_plot_spectrogram(tmp_path):
-    Spectrum_Analysis = SpectrumAnalysis()
+    Spectrum_Analysis = SpectrogramAnalysis()
     signal = list(mock_power_generator())
     psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict = Spectrum_Analysis(signal)
     output = (psd_welch_dict, psd_periodogram_dict, psd_multitaper_dict, spec_dict)
