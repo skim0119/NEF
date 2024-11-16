@@ -21,16 +21,15 @@ spectrum_per = SpectrumAnalysisPeriodogram()
 spectrum_mul = SpectrumAnalysisMultitaper()
 Periodogram_Analysis = PowerSpectrumAnalysis()
 
-Spectrum_Analysis = SpectrogramAnalysis(frequency_limit=(0.5, 100))
-
-# data >> spectrum_per >> Periodogram_Analysis
-# pipeline1 = Pipeline(Periodogram_Analysis)
-# pipeline1.run(working_directory=working_directory, verbose=True)
-
-data >> Spectrum_Analysis
-pipeline2 = Pipeline(Spectrum_Analysis)
+data >> spectrum_welch >> Periodogram_Analysis
+data >> spectrum_per
+data >> spectrum_mul
+pipeline1 = Pipeline(Periodogram_Analysis)
+pipeline2 = Pipeline(spectrum_per)
+pipeline3 = Pipeline(spectrum_mul)
+pipeline1.run(working_directory=working_directory, verbose=True)
 pipeline2.run(working_directory=working_directory, verbose=True)
-
+pipeline3.run(working_directory=working_directory, verbose=True)
 # data >> Periodogram_Analysis
 # data >> Spectrum_Analysis
 # pipeline1 = Pipeline(Periodogram_Analysis)

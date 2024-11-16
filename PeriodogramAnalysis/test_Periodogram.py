@@ -306,12 +306,12 @@ def test_SpectrumAnalysisWelch(tmp_path):
             assert "freqs" in channel_data
             assert "psd" in channel_data
 
-    analysis.plot_spectrum_methods_welch(output=psd_dict, input=None, show=False, save_path=tmp_path)
+    analysis.plot_spectrum(output=psd_dict, input=None, show=False, save_path=tmp_path)
 
     # Check if plots are saved correctly for each chunk and channel
     for chunk in psd_dict.keys():
         for channel in psd_dict[chunk].keys():
-            plot_file = tmp_path / f"Chunk{chunk}_welch_channel_{channel}.png"
+            plot_file = tmp_path / f"Chunk{chunk}_{analysis.tag.replace(' ', '_').lower()}_channel_{channel}.png"
             assert plot_file.exists()
 
 def test_SpectrumAnalysisPeriodogram(tmp_path):
@@ -331,12 +331,12 @@ def test_SpectrumAnalysisPeriodogram(tmp_path):
             assert "freqs" in channel_data
             assert "psd" in channel_data
 
-    analysis.plot_spectrum_methods_periodogram(output=psd_dict, input=None, show=False, save_path=tmp_path)
+    analysis.plot_spectrum(output=psd_dict, input=None, show=False, save_path=tmp_path)
 
     # Check if plots are saved correctly for each chunk and channel
     for chunk in psd_dict.keys():
         for channel in psd_dict[chunk].keys():
-            plot_file = tmp_path / f"Chunk{chunk}_periodogram_channel_{channel}.png"
+            plot_file = tmp_path / f"Chunk{chunk}_{analysis.tag.replace(' ', '_').lower()}_channel_{channel}.png"
             assert plot_file.exists()
 
 def test_SpectrumAnalysisMultitaper(tmp_path):
@@ -356,11 +356,11 @@ def test_SpectrumAnalysisMultitaper(tmp_path):
             assert "freqs" in channel_data
             assert "psd" in channel_data
 
-    analysis.plot_spectrum_methods_multitaper(output=psd_dict, input=None, show=False, save_path=tmp_path)
+    analysis.plot_spectrum(output=psd_dict, input=None, show=False, save_path=tmp_path)
 
     # Check if plots are saved correctly for each chunk and channel
     for chunk in psd_dict.keys():
         for channel in psd_dict[chunk].keys():
-            plot_file = tmp_path / f"Chunk{chunk}_multitaper_channel_{channel}.png"
+            plot_file = tmp_path / f"Chunk{chunk}_{analysis.tag.replace(' ', '_').lower()}_channel_{channel}.png"
             assert plot_file.exists()
 
