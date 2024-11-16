@@ -1,8 +1,8 @@
 import numpy as np
 
 from miv.core.datatype import Signal
-from PeriodogramAnalysis import PowerSpectrumAnalysis
-from PowerSpectrumAnalysis import SpectrogramAnalysis
+from PowerSpectrumAnalysis import PowerSpectrumAnalysis
+from SpectrogramAnalysis import SpectrogramAnalysis
 
 def mock_power():
     data = np.random.rand(30000, 10)  # Mock data with 30,000 samples and 5 channels

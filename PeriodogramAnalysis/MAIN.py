@@ -1,8 +1,8 @@
 from miv.core.operator import DataLoader
 from miv.io.openephys import DataManager
 from miv.core.pipeline import Pipeline
-from PeriodogramAnalysis import PowerSpectrumAnalysis
-from PowerSpectrumAnalysis import SpectrogramAnalysis
+from PowerSpectrumAnalysis import PowerSpectrumAnalysis
+from SpectrogramAnalysis import SpectrogramAnalysis
 from miv.datasets.openephys_sample import load_data
 from miv.signal.filter import ButterBandpass, MedianFilter
 from miv.core.operator import Operator, DataLoader
