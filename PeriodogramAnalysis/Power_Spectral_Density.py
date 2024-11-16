@@ -4,7 +4,6 @@ import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal as sig
-from scipy.integrate import simpson
 from dataclasses import dataclass, field
 from collections import defaultdict
 from typing import Tuple, Dict, Any, Generator, Optional
@@ -14,6 +13,7 @@ from miv.core.operator.wrapper import cache_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
 from MultitaperPowerSpectrum import multitaper_psd
+
 
 @dataclass
 class SpectrumAnalysisWelch(OperatorMixin):
@@ -25,9 +25,7 @@ class SpectrumAnalysisWelch(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(
-        self, signal: SignalType
-    ) -> Dict[int, Dict[int, Dict[str, Any]]]:
+    def __call__(self, signal: SignalType) -> Dict[int, Dict[int, Dict[str, Any]]]:
 
         psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
@@ -60,13 +58,12 @@ class SpectrumAnalysisWelch(OperatorMixin):
             psd_welch_dict[channel] = {"freqs": freqs, "psd": psd}
         return psd_welch_dict
 
-
     def plot_spectrum_methods_welch(
-            self,
-            output,
-            input,
-            show: bool = False,
-            save_path: Optional[pathlib.Path] = None,
+        self,
+        output,
+        input,
+        show: bool = False,
+        save_path: Optional[pathlib.Path] = None,
     ):
 
         psd_dict = output
@@ -101,6 +98,7 @@ class SpectrumAnalysisWelch(OperatorMixin):
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
+
 @dataclass
 class SpectrumAnalysisPeriodogram(OperatorMixin):
     band_display: Tuple[float, float] = field(default_factory=lambda: [0, 100])
@@ -110,9 +108,7 @@ class SpectrumAnalysisPeriodogram(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(
-        self, signal: SignalType
-    ) -> Dict[int, Dict[int, Dict[str, Any]]]:
+    def __call__(self, signal: SignalType) -> Dict[int, Dict[int, Dict[str, Any]]]:
 
         psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
@@ -120,7 +116,9 @@ class SpectrumAnalysisPeriodogram(OperatorMixin):
 
         return psd_dict
 
-    def spectrum_analysis_periodogram(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
+    def spectrum_analysis_periodogram(
+        self, signal: Signal
+    ) -> Dict[int, Dict[str, Any]]:
         """
         Compute PSD using periodogram for the signal.
 
@@ -143,11 +141,11 @@ class SpectrumAnalysisPeriodogram(OperatorMixin):
         return psd_periodogram_dict
 
     def plot_spectrum_methods_periodogram(
-            self,
-            output,
-            input,
-            show: bool = False,
-            save_path: Optional[pathlib.Path] = None,
+        self,
+        output,
+        input,
+        show: bool = False,
+        save_path: Optional[pathlib.Path] = None,
     ):
 
         psd_dict = output
@@ -182,6 +180,7 @@ class SpectrumAnalysisPeriodogram(OperatorMixin):
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
+
 @dataclass
 class SpectrumAnalysisMultitaper(OperatorMixin):
     band_display: Tuple[float, float] = field(default_factory=lambda: [0, 100])
@@ -191,9 +190,7 @@ class SpectrumAnalysisMultitaper(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(
-        self, signal: SignalType
-    ) -> Dict[int, Dict[int, Dict[str, Any]]]:
+    def __call__(self, signal: SignalType) -> Dict[int, Dict[int, Dict[str, Any]]]:
 
         psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):

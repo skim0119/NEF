@@ -1,6 +1,5 @@
 import os
 
-import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal as sig
@@ -12,8 +11,6 @@ from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
-from MultitaperPowerSpectrum import multitaper_psd
-from PowerSpectrumAnalysis import PowerSpectrumAnalysis
 
 
 @dataclass
@@ -23,10 +20,6 @@ class SpectrogramAnalysis(OperatorMixin):
 
     Attributes:
     -----------
-    band_display : list
-        Frequency band range to display in spectrum comparison plots.
-    window_length_for_welch : float
-        Window length in seconds for Welch's method.
     frequency_limit : list
         Frequency range limit for analysis.
     nperseg : int
@@ -35,12 +28,9 @@ class SpectrogramAnalysis(OperatorMixin):
         Number of points to overlap between segments for spectrogram.
     """
 
-    band_display: Tuple[float, float] = field(default_factory=lambda: [0, 100])
-    window_length_for_welch: int = 4
     frequency_limit: Tuple[float, float] = field(default_factory=lambda: [0.5, 100])
     plotting_interval: Tuple[float, float] = field(default_factory=lambda: [0, 60])
     nperseg_ratio: float = 0.25
-
     tag = "Spectrogram Analysis"
 
     def __post_init__(self):
@@ -49,7 +39,7 @@ class SpectrogramAnalysis(OperatorMixin):
     @cache_call
     def __call__(self, signal: SignalType) -> Dict[int, Dict[int, Dict[str, Any]]]:
         """
-        Perform spectrum analysis on the given signal using multiple methods.
+        Perform spectrum analysis on the given signal.
 
         Parameters:
         -----------
@@ -58,8 +48,6 @@ class SpectrogramAnalysis(OperatorMixin):
 
         Returns:
         --------
-        psd_dict:
-            PSD dictionary
         spec_dict
             spectrum dictionary
         """
