@@ -3,21 +3,17 @@ import os
 import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import signal as sig
 from scipy.integrate import simpson
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import defaultdict
-from typing import Tuple, Dict, Any, Generator, Optional
+from typing import Tuple, Dict, Any, Optional
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
-from miv.core.datatype import Signal
-from miv.typing import SignalType
-from MultitaperPowerSpectrum import multitaper_psd
 
 
 @dataclass
-class PeriodogramAnalysis(OperatorMixin):
+class PowerSpectrumAnalysis(OperatorMixin):
     """
     A class to perform Periodogram Analysis using Welch's method and multitaper PSD.
     The algorithm implementation is inspired from: <https://raphaelvallat.com/bandpower.html>
@@ -33,16 +29,17 @@ class PeriodogramAnalysis(OperatorMixin):
     band_list: tuple = ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100))
     window_length_for_welch: int = 4
 
-    tag: str = "Periodogram Analysis"
+    tag: str = "PowerSpectrum Analysis"
 
     def __post_init__(self):
         super().__init__()
 
     @cache_call
     def __call__(
-        self, signal: SignalType
+        self, psd_dict: Dict[int, Dict[int, Dict[str, Any]]]
     ) -> Tuple[
-        Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]]
+         Dict[int, Dict[int, Dict[str, Any]]],
+         Dict[int, Dict[int, Dict[str, Any]]]
     ]:
         """
         Perform the periodogram analysis on the given signal.
@@ -59,17 +56,10 @@ class PeriodogramAnalysis(OperatorMixin):
         power_dict
             power dictionary
         """
-        psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         power_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
-        for chunk_idx, signal_piece in enumerate(signal):
-            # Compute psd_dict and power_dict for welch_periodogram plotting
-            psd_dict[chunk_idx] = self.SpectrumAnalysisWelch(signal_piece)
-            power_dict[chunk_idx] = self.computing_absolute_and_relative_power(
-                psd_dict[chunk_idx]
-            )
-
-            # Compute band power and their ratio
-            self.computing_ratio_and_bandpower(signal_piece, power_dict, chunk_idx)
+        for chunk_idx in psd_dict.keys():
+            power_dict[chunk_idx] = self.computing_absolute_and_relative_power(psd_dict[chunk_idx])
+            self.computing_ratio_and_bandpower(psd_dict[chunk_idx], power_dict[chunk_idx], chunk_idx)
 
         return psd_dict, power_dict
 
@@ -226,15 +216,15 @@ class PeriodogramAnalysis(OperatorMixin):
                 if save_path is not None:
                     plot_path = os.path.join(
                         save_path,
-                        f"Chunk{chunk}_Welch_periodogram_of_channel_{channel}.png",
+                        f"Chunk{chunk}_periodogram_of_channel_{channel}.png",
                     )
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
     def computing_ratio_and_bandpower(
         self,
-        signal: Signal,
-        power_dict: Dict[int, Dict[int, Dict[str, Any]]],
+        psd_dict: Dict[int, Dict[str, Any]],
+        power_dict: Dict[int, Dict[str, Any]],
         chunk_index: int,
     ):
         """
@@ -247,32 +237,32 @@ class PeriodogramAnalysis(OperatorMixin):
         power_dict : dict
             Dictionary containing power values for each chunk and channel.
         """
-        for channel in range(signal.number_of_channels):
+        for channel in psd_dict.keys():
             self.logger.info(f"Analysis of chunk {chunk_index}, channel {channel}\n")
 
             band_names = ["delta", "theta", "alpha", "beta", "gamma"]
             absolute_powers = [
-                power_dict[chunk_index][channel]["delta_power"],
-                power_dict[chunk_index][channel]["theta_power"],
-                power_dict[chunk_index][channel]["alpha_power"],
-                power_dict[chunk_index][channel]["beta_power"],
-                power_dict[chunk_index][channel]["gamma_power"],
+                power_dict[channel]["delta_power"],
+                power_dict[channel]["theta_power"],
+                power_dict[channel]["alpha_power"],
+                power_dict[channel]["beta_power"],
+                power_dict[channel]["gamma_power"],
             ]
 
             relative_powers = [
-                power_dict[chunk_index][channel]["delta_rel_power"],
-                power_dict[chunk_index][channel]["theta_rel_power"],
-                power_dict[chunk_index][channel]["alpha_rel_power"],
-                power_dict[chunk_index][channel]["beta_rel_power"],
-                power_dict[chunk_index][channel]["gamma_rel_power"],
+                power_dict[channel]["delta_rel_power"],
+                power_dict[channel]["theta_rel_power"],
+                power_dict[channel]["alpha_rel_power"],
+                power_dict[channel]["beta_rel_power"],
+                power_dict[channel]["gamma_rel_power"],
             ]
 
             for band in self.band_list:
                 multitaper_power = self.computing_multitaper_bandpower(
-                    signal, band, channel
+                    psd_dict[channel], band, channel
                 )
                 multitaper_power_rel = self.computing_multitaper_bandpower(
-                    signal, band, channel, relative=True
+                    psd_dict[channel], band, channel, relative=True
                 )
                 self.logger.info(
                     f"{band[0]}Hz to {band[1]}Hz: Power (absolute) (Multitaper): {multitaper_power:.3f}\n"
@@ -281,9 +271,9 @@ class PeriodogramAnalysis(OperatorMixin):
                     f"{band[0]}Hz to {band[1]}Hz: Power (relative) (Multitaper): {multitaper_power_rel:.3f}\n"
                 )
 
-                welch_power = self.computing_welch_bandpower(signal, band, channel)
+                welch_power = self.computing_welch_bandpower(psd_dict[channel], band, channel)
                 welch_power_rel = self.computing_welch_bandpower(
-                    signal, band, channel, relative=True
+                    psd_dict[channel], band, channel, relative=True
                 )
 
                 self.logger.info(
@@ -305,34 +295,15 @@ class PeriodogramAnalysis(OperatorMixin):
 
     def computing_multitaper_bandpower(
         self,
-        signal: Signal,
+        psd_dict_single_channel,
         band: Tuple[float, float],
         channel: int,
         relative: bool = False,
     ) -> float:
-        """
-        Compute band power using multitaper method.
 
-        Parameters:
-        -----------
-        signal : SignalType
-            Input signal to be analyzed.
-        band : list
-            Frequency band of interest.
-        channel : int
-            Channel number to compute band power for.
-        relative : bool
-            If True, compute relative band power.
-
-        Returns:
-        --------
-        float
-            Computed band power.
-        """
         low, high = band
-        frequency = signal.rate
-
-        psd, freqs = multitaper_psd(signal[channel], frequency)
+        psd = psd_dict_single_channel["psd"]
+        freqs= psd_dict_single_channel["freqs"]
         freq_res = freqs[1] - freqs[0]
         idx_band = np.logical_and(freqs >= low, freqs <= high)
         bp = simpson(psd[idx_band], dx=freq_res)
@@ -343,39 +314,15 @@ class PeriodogramAnalysis(OperatorMixin):
 
     def computing_welch_bandpower(
         self,
-        signal: Signal,
+        psd_dict_single_channel,
         band: Tuple[float, float],
         channel: int,
         relative: bool = False,
     ) -> float:
-        """
-        Compute band power using Welch's method.
 
-        Parameters:
-        -----------
-        signal : SignalType
-            Input signal to be analyzed.
-        band : list
-            Frequency band of interest.
-        channel : int
-            Channel number to compute band power for.
-        relative : bool
-            If True, compute relative band power.
-
-        Returns:
-        --------
-        float
-            Computed band power.
-        """
         low, high = band
-        frequency = signal.rate
-
-        if self.window_length_for_welch is not None:
-            nperseg = self.window_length_for_welch * frequency
-        else:
-            nperseg = (2 / low) * frequency
-        freqs, psd = sig.welch(signal[channel], frequency, nperseg=nperseg)
-
+        psd = psd_dict_single_channel["psd"]
+        freqs= psd_dict_single_channel["freqs"]
         freq_res = freqs[1] - freqs[0]
         idx_band = np.logical_and(freqs >= low, freqs <= high)
         bp = simpson(psd[idx_band], dx=freq_res)

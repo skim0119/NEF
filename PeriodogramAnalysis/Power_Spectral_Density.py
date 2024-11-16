@@ -31,9 +31,9 @@ class SpectrumAnalysisWelch(OperatorMixin):
 
         psd_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            if chunk_idx >= 1:
+            if chunk_idx > 1:
                 break
-            signal_piece.data = signal_piece.data[:, [2]]
+            signal_piece.data = signal_piece.data[:, [2, 3]]
             psd_dict[chunk_idx] = self.spectrum_analysis_welch(signal_piece)
 
         return psd_dict

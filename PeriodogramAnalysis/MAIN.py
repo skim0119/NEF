@@ -1,7 +1,7 @@
 from miv.core.operator import DataLoader
 from miv.io.openephys import DataManager
 from miv.core.pipeline import Pipeline
-from PeriodogramAnalysis import PeriodogramAnalysis
+from PeriodogramAnalysis import PowerSpectrumAnalysis
 from PowerSpectrumAnalysis import SpectrumAnalysis
 from miv.datasets.openephys_sample import load_data
 from miv.signal.filter import ButterBandpass, MedianFilter
@@ -19,7 +19,7 @@ data: DataLoader = dataset[0]
 spectrum_welch = SpectrumAnalysisWelch()
 spectrum_per = SpectrumAnalysisPeriodogram()
 spectrum_mul = SpectrumAnalysisMultitaper()
-Periodogram_Analysis = PeriodogramAnalysis(
+Periodogram_Analysis = PowerSpectrumAnalysis(
         window_length_for_welch=4
     )
 
@@ -29,15 +29,15 @@ Spectrum_Analysis = SpectrumAnalysis(
         band_display = [0, 5]
     )
 
-data >> spectrum_welch
-data >> spectrum_per
-data >> spectrum_mul
-pipeline1 = Pipeline(spectrum_welch)
-pipeline2 = Pipeline(spectrum_per)
-pipeline3 = Pipeline(spectrum_mul)
+data >> spectrum_per >> Periodogram_Analysis
+# data >> spectrum_per
+# data >> spectrum_mul
+pipeline1 = Pipeline(Periodogram_Analysis)
+# pipeline2 = Pipeline(spectrum_per)
+# pipeline3 = Pipeline(spectrum_mul)
 pipeline1.run(working_directory=working_directory, verbose=True)
-pipeline2.run(working_directory=working_directory, verbose=True)
-pipeline3.run(working_directory=working_directory, verbose=True)
+# pipeline2.run(working_directory=working_directory, verbose=True)
+# pipeline3.run(working_directory=working_directory, verbose=True)
 
 
 # data >> Periodogram_Analysis

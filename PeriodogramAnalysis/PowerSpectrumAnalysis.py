@@ -13,7 +13,7 @@ from miv.core.operator.wrapper import cache_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
 from MultitaperPowerSpectrum import multitaper_psd
-from PeriodogramAnalysis import PeriodogramAnalysis
+from PeriodogramAnalysis import PowerSpectrumAnalysis
 
 
 @dataclass
