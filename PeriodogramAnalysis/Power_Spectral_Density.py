@@ -18,7 +18,7 @@ from MultitaperPowerSpectrum import multitaper_psd
 @dataclass
 class SpectrumAnalysisWelch(OperatorMixin):
     window_length_for_welch: int = 4
-    band_display: Tuple[float, float] = field(default_factory=lambda: [0, 100])
+    band_display: Tuple[float, float] = (0, 100)
     tag: str = "Welch PSD"
 
     def __post_init__(self):
@@ -101,7 +101,7 @@ class SpectrumAnalysisWelch(OperatorMixin):
 
 @dataclass
 class SpectrumAnalysisPeriodogram(OperatorMixin):
-    band_display: Tuple[float, float] = field(default_factory=lambda: [0, 100])
+    band_display: Tuple[float, float] = (0, 100)
     tag: str = "Periodogram PSD"
 
     def __post_init__(self):
@@ -183,7 +183,7 @@ class SpectrumAnalysisPeriodogram(OperatorMixin):
 
 @dataclass
 class SpectrumAnalysisMultitaper(OperatorMixin):
-    band_display: Tuple[float, float] = field(default_factory=lambda: [0, 100])
+    band_display: Tuple[float, float] = (0, 100)
     tag: str = "Multitaper PSD"
 
     def __post_init__(self):

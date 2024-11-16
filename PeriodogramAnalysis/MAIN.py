@@ -19,15 +19,9 @@ data: DataLoader = dataset[0]
 spectrum_welch = SpectrumAnalysisWelch()
 spectrum_per = SpectrumAnalysisPeriodogram()
 spectrum_mul = SpectrumAnalysisMultitaper()
-Periodogram_Analysis = PowerSpectrumAnalysis(
-        window_length_for_welch=4
-    )
+Periodogram_Analysis = PowerSpectrumAnalysis()
 
-Spectrum_Analysis = SpectrogramAnalysis(
-        window_length_for_welch=4,
-        frequency_limit=[0.5, 100],
-        band_display = [0, 5]
-    )
+Spectrum_Analysis = SpectrogramAnalysis(frequency_limit=(0.5, 100))
 
 # data >> spectrum_per >> Periodogram_Analysis
 # pipeline1 = Pipeline(Periodogram_Analysis)

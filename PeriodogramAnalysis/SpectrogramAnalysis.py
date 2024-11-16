@@ -28,8 +28,8 @@ class SpectrogramAnalysis(OperatorMixin):
         Number of points to overlap between segments for spectrogram.
     """
 
-    frequency_limit: Tuple[float, float] = field(default_factory=lambda: [0.5, 100])
-    plotting_interval: Tuple[float, float] = field(default_factory=lambda: [0, 60])
+    frequency_limit: Tuple[float, float] = (0.5, 100)
+    plotting_interval: Tuple[float, float] = (0, 60)
     nperseg_ratio: float = 0.25
     tag = "Spectrogram Analysis"
 

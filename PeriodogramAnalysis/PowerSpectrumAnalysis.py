@@ -258,10 +258,10 @@ class PowerSpectrumAnalysis(OperatorMixin):
 
             for band in self.band_list:
                 multitaper_power = self.computing_bandpower(
-                    psd_dict[channel], band, channel
+                    psd_dict[channel], band
                 )
                 multitaper_power_rel = self.computing_bandpower(
-                    psd_dict[channel], band, channel, relative=True
+                    psd_dict[channel], band, relative=True
                 )
                 self.logger.info(
                     f"{band[0]}Hz to {band[1]}Hz: Power (absolute): {multitaper_power:.3f}\n"
