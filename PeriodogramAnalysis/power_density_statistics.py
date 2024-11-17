@@ -35,11 +35,11 @@ class SpectrumAnalysisBase(OperatorMixin):
         raise NotImplementedError("compute_psd not finished")
 
     def plot_spectrum(
-            self,
-            output,
-            input,
-            show: bool = False,
-            save_path: Optional[pathlib.Path] = None,
+        self,
+        output,
+        input,
+        show: bool = False,
+        save_path: Optional[pathlib.Path] = None,
     ):
         psd_dict = output
         for chunk in psd_dict.keys():
@@ -92,6 +92,7 @@ class SpectrumAnalysisWelch(SpectrumAnalysisBase):
             psd_welch_dict[channel] = {"freqs": freqs, "psd": psd}
         return psd_welch_dict
 
+
 @dataclass
 class SpectrumAnalysisPeriodogram(SpectrumAnalysisBase):
     window_length_for_welch: int = 4
@@ -107,6 +108,7 @@ class SpectrumAnalysisPeriodogram(SpectrumAnalysisBase):
             psd_periodogram_dict[channel] = {"freqs": freqs, "psd": psd}
 
         return psd_periodogram_dict
+
 
 @dataclass
 class SpectrumAnalysisMultitaper(SpectrumAnalysisBase):

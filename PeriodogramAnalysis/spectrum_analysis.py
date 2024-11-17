@@ -257,9 +257,7 @@ class PowerSpectrumAnalysis(OperatorMixin):
             ]
 
             for band in self.band_list:
-                multitaper_power = self.computing_bandpower(
-                    psd_dict[channel], band
-                )
+                multitaper_power = self.computing_bandpower(psd_dict[channel], band)
                 multitaper_power_rel = self.computing_bandpower(
                     psd_dict[channel], band, relative=True
                 )
