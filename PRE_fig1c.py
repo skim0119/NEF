@@ -3,13 +3,16 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error
-#define lorenz system
+
+
+# define lorenz system
 def lorenz_system(state, t):
     x, y, z = state
     a = 10
     b = 35
-    c = 8.0/3.0
-    return [a*(y-x), x*(b-z)-y, x*y-c*z]
+    c = 8.0 / 3.0
+    return [a * (y - x), x * (b - z) - y, x * y - c * z]
+
 
 # simulation parameter
 T_prepare = 1000
@@ -23,10 +26,19 @@ sigma = 1
 alpha_values = 0.53
 beta = 0.477
 pc = 0.95
-lamda =  1e-7
+lamda = 1e-7
+
 
 class ReservoirComputing:
-    def __init__(self, num_neuron=N, sigma=sigma, alpha=alpha_values, beta=beta, dt=dt, Din=input_dimension):
+    def __init__(
+        self,
+        num_neuron=N,
+        sigma=sigma,
+        alpha=alpha_values,
+        beta=beta,
+        dt=dt,
+        Din=input_dimension,
+    ):
         self.num_neuron = num_neuron
         self.sigma = sigma
         self.beta = beta
@@ -53,12 +65,15 @@ class ReservoirComputing:
 
             sum_U = np.dot(self.matrix_H, input[t, :])
 
-            theta_dot = (1 - alpha) * self.matrix_w.flatten() + (alpha / N) * sum_theta + self.beta * np.tanh(
-                self.matrix_B.flatten() + sum_U)
+            theta_dot = (
+                (1 - alpha) * self.matrix_w.flatten()
+                + (alpha / N) * sum_theta
+                + self.beta * np.tanh(self.matrix_B.flatten() + sum_U)
+            )
 
             self.theta += theta_dot * self.dt
 
-            #self.theta = np.unwrap(self.theta)
+            # self.theta = np.unwrap(self.theta)
             self.theta = np.mod(self.theta, 2 * np.pi)
 
             self.theta_list.append(np.copy(self.theta))
@@ -70,16 +85,22 @@ class ReservoirComputing:
         self.model = Ridge(alpha=self.beta, fit_intercept=False)
         self.model.fit(state_history[:], inputs[:])
 
-        training_loss = mean_squared_error(inputs[:], self.model.predict(state_history)[:])
+        training_loss = mean_squared_error(
+            inputs[:], self.model.predict(state_history)[:]
+        )
         print(f"Training Loss (MSE): {training_loss}")
 
         return self.model.predict(state_history)
+
 
 initial_state = np.array([1.0, 1.0, 1.0])
 time = np.arange(0, T_train + T_pred) * dt
 time_train, time_test = time[:T_train], time[T_train:]
 data = odeint(lorenz_system, initial_state, time)
-data_train, data_test = data[T_prepare : T_prepare + T_train], data[T_prepare + T_train:]
+data_train, data_test = (
+    data[T_prepare : T_prepare + T_train],
+    data[T_prepare + T_train :],
+)
 
 
 RC = ReservoirComputing()
@@ -92,13 +113,13 @@ training_states = RC.train(data_train, reservoir_states[T_prepare:])
 # prediction, state = RC.prediction(data_test.shape[0])
 #
 plt.figure(figsize=(12, 8))
-plt.subplot(3,1,1)
+plt.subplot(3, 1, 1)
 plt.plot(time_train, data_train[:, 0], label="Train Data")
-#plt.plot(time_train, reservoir_states[T_prepare : T_prepare + T_train, 0], label="Reservoir")
+# plt.plot(time_train, reservoir_states[T_prepare : T_prepare + T_train, 0], label="Reservoir")
 plt.plot(time_train, training_states[:, 0], label="Test")
 # plt.plot(time_test, state[:, 0], label="state")
-#plt.plot(time_test, data_test[:, 0], label="True")
-plt.ylabel('x')
+# plt.plot(time_test, data_test[:, 0], label="True")
+plt.ylabel("x")
 #
 # plt.subplot(3,1,2)
 # plt.plot(time_train, data_train[:, 1], label="Train Data")

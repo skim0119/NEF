@@ -19,14 +19,20 @@ dataset: DataManager = DataManager(data_collection_path=path)
 data: DataLoader = dataset[0]
 
 # Create operator modules:
-bandpass_filter: Operator = ButterBandpass(lowcut=300, highcut=3000, order=4, tag="bandpass")
-spike_detection: Operator = ThresholdCutoff(cutoff=4.0, dead_time=0.002, tag="spikes", progress_bar=True)
+bandpass_filter: Operator = ButterBandpass(
+    lowcut=300, highcut=3000, order=4, tag="bandpass"
+)
+spike_detection: Operator = ThresholdCutoff(
+    cutoff=4.0, dead_time=0.002, tag="spikes", progress_bar=True
+)
 
 data >> bandpass_filter >> spike_detection
+
 
 @dataclass
 class BAKS_firing_rate(OperatorMixin):
     tag = "BAKS firing rate"
+
     def __post_init__(self):
         super().__init__()
 
@@ -47,7 +53,9 @@ class BAKS_firing_rate(OperatorMixin):
         # Estimate the firing rate
         FiringRate = 0
         for j in range(N):
-            K = (1 / (np.sqrt(2 * np.pi) * h)) * np.exp(-((Time - SpikeTimes[j]) ** 2) / (2 * h ** 2))
+            K = (1 / (np.sqrt(2 * np.pi) * h)) * np.exp(
+                -((Time - SpikeTimes[j]) ** 2) / (2 * h**2)
+            )
             FiringRate += K
 
         return FiringRate, h
@@ -56,7 +64,7 @@ class BAKS_firing_rate(OperatorMixin):
         spike_times = spike_detection.output()
         spikestamps_view = spike_times.get_view(0, 2000)
 
-        directory = 'spike'
+        directory = "spike"
         os.makedirs(directory, exist_ok=True)
 
         firing_rate_list = []
@@ -67,24 +75,24 @@ class BAKS_firing_rate(OperatorMixin):
             # Calculate firing rate using BAKS function
             Time = spikestamp[-1] - spikestamp[0]
             a = 0.32
-            b = len(spikestamp) ** (4. / 5.)
+            b = len(spikestamp) ** (4.0 / 5.0)
             FiringRate, h = self.BAKS(spikestamp - spikestamp[0], Time, a, b)
             rate_ref = len(spikestamp) / Time
             firing_rate_list.append((ch, FiringRate, rate_ref))
 
         firing_rate_list.sort(key=lambda x: x[1], reverse=True)
-        summary_file_path = os.path.join(directory, 'firing_rate_summary_sorted.txt')
+        summary_file_path = os.path.join(directory, "firing_rate_summary_sorted.txt")
 
-        with open(summary_file_path, 'w') as summary_file:
+        with open(summary_file_path, "w") as summary_file:
             summary_file.write("channel, firing_rate_hz, ref_firing_rate_spikes/time\n")
 
             for ch, firing_rate, rate_ref in firing_rate_list:
                 summary_file.write(f"{ch}, {firing_rate}, {rate_ref}\n")
 
-
     def after_run_print(self, output):
         print(output)
         return output
+
 
 firing_rate = BAKS_firing_rate()
 spike_detection >> firing_rate

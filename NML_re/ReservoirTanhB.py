@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.sparse.linalg import svds
 
+
 class ReservoirTanhB:
     def __init__(self, A, B, rs, xs, delT, gam):
         """
@@ -30,10 +31,10 @@ class ReservoirTanhB:
         D[:, 0] = self.r.reshape(-1)  # Store the initial state
         for i in range(1, nx):
             if i > nInd * nx:
-                print('=', end='', flush=True)  # Display progress
+                print("=", end="", flush=True)  # Display progress
                 nInd += 0.01
 
-            self.propagate(x[:, i-1, :])  # Propagate states
+            self.propagate(x[:, i - 1, :])  # Propagate states
             D[:, i] = self.r.reshape(-1)
         return D
 
@@ -49,7 +50,7 @@ class ReservoirTanhB:
         D = np.zeros((self.A.shape[0], nx))
         D[:, 0] = self.r
         for i in range(1, nx):
-            self.propagateSVD(x[:, i-1, :])
+            self.propagateSVD(x[:, i - 1, :])
             D[:, i] = self.r
         return D
 
@@ -61,9 +62,11 @@ class ReservoirTanhB:
         D = np.zeros((self.A.shape[0], nx, 4))
         D[:, 0, 0] = self.r
         for i in range(1, nx):
-            self.propagate(x[:, i-1, :])
+            self.propagate(x[:, i - 1, :])
             D[:, i] = self.r
-            D[:, i-1, 1:4] = D[:, i-1, 0] + np.array([self.k1 / 2, self.k2 / 2, self.k3]).T
+            D[:, i - 1, 1:4] = (
+                D[:, i - 1, 0] + np.array([self.k1 / 2, self.k2 / 2, self.k3]).T
+            )
         return D
 
     def predict(self, W, nc):
@@ -105,7 +108,9 @@ class ReservoirTanhB:
         for i in range(1, nc):
             self.propagate_x()
             D[:, i] = self.r
-            D[:, i-1, 1:4] = D[:, i-1, 0] + np.array([self.k1 / 2, self.k2 / 2, self.k3]).T
+            D[:, i - 1, 1:4] = (
+                D[:, i - 1, 0] + np.array([self.k1 / 2, self.k2 / 2, self.k3]).T
+            )
         return D
 
     # Runge-Kutta 4th order integration
@@ -120,7 +125,6 @@ class ReservoirTanhB:
         self.k4 = self.delT * self.del_r(self.r + self.k3, x[:, 0, 3])
 
         self.r = self.r + (self.k1 + 2 * self.k2 + 2 * self.k3 + self.k4) / 6
-
 
     def propagate_x(self):
         """
@@ -158,7 +162,9 @@ class ReservoirTanhB:
         Define the ODE for driven reservoir.
         """
 
-        return self.gam * (-r + np.tanh(self.A @ r + (self.B @ x)[:, np.newaxis] + self.d))
+        return self.gam * (
+            -r + np.tanh(self.A @ r + (self.B @ x)[:, np.newaxis] + self.d)
+        )
 
     def del_r_x(self, r):
         """

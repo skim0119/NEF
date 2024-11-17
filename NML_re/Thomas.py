@@ -47,7 +47,7 @@ class Thomas:
         print("." * 100)  # Progress bar
         for i in range(1, n):
             if i > nInd * n:
-                print('=', end='', flush=True)  # Display progress
+                print("=", end="", flush=True)  # Display progress
                 nInd += 0.01
 
             # Runge-Kutta 4th order method to propagate the system
@@ -59,8 +59,9 @@ class Thomas:
 
             # Store the new state
             X[:, i, 0] = self.x
-            X[:, i-1, 1:4] = np.stack([self.x+k1/2, self.x+k2/2, self.x+k3], axis = -1)
+            X[:, i - 1, 1:4] = np.stack(
+                [self.x + k1 / 2, self.x + k2 / 2, self.x + k3], axis=-1
+            )
 
         print()  # Finish progress bar
         return X
-
