@@ -82,6 +82,13 @@ def multitaper_psd(
                 / n_tapers
             )
 
+    psd *= 2  # Double power for positive frequencies
+
+    # Do not double power for DC (0 Hz) and Nyquist frequency
+    psd[..., 0] /= 2  # DC component
+    if n_times % 2 == 0:  # Only divide Nyquist component if it exists (even n_times)
+        psd[..., -1] /= 2
+
     psd /= sfreq
     psd = psd.reshape(dshape + (n_freqs,))
     return psd, freqs
