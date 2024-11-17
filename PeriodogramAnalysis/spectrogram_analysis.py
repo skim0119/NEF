@@ -1,11 +1,12 @@
+from typing import Any
+
 import os
+from dataclasses import dataclass
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import signal as sig
-from dataclasses import dataclass
+import scipy
 from collections import defaultdict
-from typing import Tuple, Dict, Any
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
@@ -28,8 +29,8 @@ class SpectrogramAnalysis(OperatorMixin):
         Number of points to overlap between segments for spectrogram.
     """
 
-    frequency_limit: Tuple[float, float] = (0.5, 100)
-    plotting_interval: Tuple[float, float] = (0, 60)
+    frequency_limit: tuple[float, float] = (0.5, 100)
+    plotting_interval: tuple[float, float] = (0, 60)
     nperseg_ratio: float = 0.25
     tag = "Spectrogram Analysis"
 
@@ -37,7 +38,7 @@ class SpectrogramAnalysis(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(self, signal: SignalType) -> Dict[int, Dict[int, Dict[str, Any]]]:
+    def __call__(self, signal: SignalType) -> dict[int, dict[int, dict[str, Any]]]:
         """
         Perform spectrum analysis on the given signal.
 
@@ -51,21 +52,21 @@ class SpectrogramAnalysis(OperatorMixin):
         spec_dict
             spectrum dictionary
         """
-        spec_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+        spec_dict: dict[int, dict[int, dict[str, Any]]] = defaultdict(dict)
 
         for chunk_index, signal_piece in enumerate(signal):
             spec_dict[chunk_index] = self.computing_spectrum(signal_piece)
 
         return spec_dict
 
-    def computing_spectrum(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
-        spec_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
+    def computing_spectrum(self, signal: Signal) -> dict[int, dict[str, Any]]:
+        spec_dict: dict[int, dict[str, Any]] = defaultdict(dict)
 
         nperseg = int(signal.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
         for channel, channel_signal in enumerate(signal):
             signal_no_bias = channel_signal - np.mean(channel_signal)
-            frequencies, times, Sxx = sig.spectrogram(
+            frequencies, times, Sxx = scipy.signal.spectrogram(
                 signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap
             )
             spec_dict[channel] = {
@@ -92,6 +93,8 @@ class SpectrogramAnalysis(OperatorMixin):
 
         for chunk in spec_dict.keys():
             for channel in spec_dict[chunk].keys():
+                channel_folder = os.path.join(save_path, f"channel{channel:03d}")
+                os.makedirs(channel_folder, exist_ok=True)
 
                 spectrogram_data = spec_dict[chunk][channel]
                 frequencies = spectrogram_data["frequencies"]
@@ -155,7 +158,7 @@ class SpectrogramAnalysis(OperatorMixin):
                     plt.show()
                 if save_path is not None:
                     plot_path = os.path.join(
-                        save_path, f"Chunk{chunk}_Spectrogram_Channel_{channel}.png"
+                        channel_folder, f"spectrogram_{chunk:03d}.png"
                     )
                     plt.savefig(plot_path, dpi=300)
-                plt.close('all')
+                plt.close("all")

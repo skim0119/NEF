@@ -1,12 +1,13 @@
+from typing import Any, Optional
+
 import os
+from dataclasses import dataclass
 
 import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import simpson
-from dataclasses import dataclass
 from collections import defaultdict
-from typing import Tuple, Dict, Any, Optional
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
@@ -21,7 +22,7 @@ class PowerSpectrumAnalysis(OperatorMixin):
     Attributes:
     -----------
     band_list : list
-        Frequency bands to analyze, default is [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]], i.e. the five common frequency bands in EEG.
+        Frequency bands to analyze, default is [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]], i.e. the five common frequency bands.
     """
 
     band_list: tuple[tuple[int, int], ...] = (
@@ -38,9 +39,9 @@ class PowerSpectrumAnalysis(OperatorMixin):
 
     @cache_call
     def __call__(
-        self, psd_dict: Dict[int, Dict[int, Dict[str, Any]]]
-    ) -> Tuple[
-        Dict[int, Dict[int, Dict[str, Any]]], Dict[int, Dict[int, Dict[str, Any]]]
+        self, psd_dict: dict[int, dict[int, dict[str, Any]]]
+    ) -> tuple[
+        dict[int, dict[int, dict[str, Any]]], dict[int, dict[int, dict[str, Any]]]
     ]:
         """
         Perform the periodogram analysis on the given signal.
@@ -57,7 +58,7 @@ class PowerSpectrumAnalysis(OperatorMixin):
         power_dict
             power dictionary
         """
-        power_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+        power_dict: dict[int, dict[int, dict[str, Any]]] = defaultdict(dict)
         for chunk_idx in psd_dict.keys():
             power_dict[chunk_idx] = self.computing_absolute_and_relative_power(
                 psd_dict[chunk_idx]
@@ -69,8 +70,8 @@ class PowerSpectrumAnalysis(OperatorMixin):
         return psd_dict, power_dict
 
     def computing_absolute_and_relative_power(
-        self, psd_dict: Dict[int, Dict[str, Any]]
-    ) -> Dict[int, Dict[str, Any]]:
+        self, psd_dict: dict[int, dict[str, Any]]
+    ) -> dict[int, dict[str, Any]]:
         """
         Compute absolute and relative power for different frequency bands.
 
@@ -84,67 +85,30 @@ class PowerSpectrumAnalysis(OperatorMixin):
         power_dict
             Dictionary containing power values for all channels in this chunk.
         """
-        bands = {
-            "delta": (0.5, 4),
-            "theta": (4, 8),
-            "alpha": (8, 12),
-            "beta": (12, 30),
-            "gamma": (30, 100),
-        }
-        power_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
+        power_dict: dict[int, dict[str, Any]] = defaultdict(list)
 
         for channel in psd_dict.keys():
-
             freqs = psd_dict[channel]["freqs"]
             psd = psd_dict[channel]["psd"]
             freq_res = freqs[1] - freqs[0]
-
-            idx_delta = np.logical_and(
-                freqs >= bands["delta"][0], freqs <= bands["delta"][1]
-            )
-            idx_theta = np.logical_and(
-                freqs >= bands["theta"][0], freqs <= bands["theta"][1]
-            )
-            idx_alpha = np.logical_and(
-                freqs >= bands["alpha"][0], freqs <= bands["alpha"][1]
-            )
-            idx_beta = np.logical_and(
-                freqs >= bands["beta"][0], freqs <= bands["beta"][1]
-            )
-            idx_gamma = np.logical_and(
-                freqs >= bands["gamma"][0], freqs <= bands["gamma"][1]
-            )
-
-            delta_power = simpson(psd[idx_delta], dx=freq_res)
-            theta_power = simpson(psd[idx_theta], dx=freq_res)
-            alpha_power = simpson(psd[idx_alpha], dx=freq_res)
-            beta_power = simpson(psd[idx_beta], dx=freq_res)
-            gamma_power = simpson(psd[idx_gamma], dx=freq_res)
             total_power = simpson(psd, dx=freq_res)
 
-            delta_rel_power = delta_power / total_power
-            theta_rel_power = theta_power / total_power
-            alpha_rel_power = alpha_power / total_power
-            beta_rel_power = beta_power / total_power
-            gamma_rel_power = gamma_power / total_power
+            if channel not in power_dict:
+                power_dict[channel] = {
+                    "psd_idx": [],
+                    "power_list": [],
+                    "rel_power_list": [],
+                }
 
-            power_dict[channel] = {
-                "idx_delta": idx_delta,
-                "idx_theta": idx_theta,
-                "idx_alpha": idx_alpha,
-                "idx_beta": idx_beta,
-                "idx_gamma": idx_gamma,
-                "delta_power": delta_power,
-                "theta_power": theta_power,
-                "alpha_power": alpha_power,
-                "beta_power": beta_power,
-                "gamma_power": gamma_power,
-                "delta_rel_power": delta_rel_power,
-                "theta_rel_power": theta_rel_power,
-                "alpha_rel_power": alpha_rel_power,
-                "beta_rel_power": beta_rel_power,
-                "gamma_rel_power": gamma_rel_power,
-            }
+            for band in self.band_list:
+                psd_idx = np.logical_and(freqs >= band[0], freqs <= band[1])
+
+                power = simpson(psd[psd_idx], dx=freq_res)
+                rel_power = power / total_power
+
+                power_dict[channel]["psd_idx"].append(psd_idx)
+                power_dict[channel]["power_list"].append(power)
+                power_dict[channel]["rel_power_list"].append(rel_power)
 
         return power_dict
 
@@ -167,34 +131,33 @@ class PowerSpectrumAnalysis(OperatorMixin):
         save_path : str
             Path to save the plot.
         """
+        color_template = plt.cm.get_cmap(
+            "tab20", len(self.band_list)
+        )  # 使用 'tab20' 配色方案
         psd_dict = output[0]
         power_dict = output[1]
 
         for chunk in psd_dict.keys():
             for channel in psd_dict[chunk].keys():
+                channel_folder = os.path.join(save_path, f"channel{channel:03d}")
+                os.makedirs(channel_folder, exist_ok=True)
 
                 freqs = psd_dict[chunk][channel]["freqs"]
                 psd = psd_dict[chunk][channel]["psd"]
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
 
-                bands = [
-                    ("idx_delta", "skyblue", "Delta (0.5-4 Hz)"),
-                    ("idx_theta", "lightseagreen", "Theta (4-8 Hz)"),
-                    ("idx_alpha", "goldenrod", "Alpha (8-12 Hz)"),
-                    ("idx_beta", "deeppink", "Beta (12-30 Hz)"),
-                    ("idx_gamma", "khaki", "Gamma (30-100 Hz)"),
-                ]
-
                 ax1.semilogx(freqs, psd, lw=1.5, color="k")
                 ax1.set_xlabel("Frequency (Hz)")
                 ax1.set_ylabel("Power spectral density (V^2 / Hz)")
                 ax1.set_title(f"Welch's periodogram of channel {channel}")
-                for bands_name, color, label in bands:
+                for i, (band_idx, label) in enumerate(
+                    zip(power_dict[chunk][channel]["psd_idx"], self.band_list)
+                ):
                     ax1.fill_between(
                         freqs,
                         psd,
-                        where=power_dict[chunk][channel][bands_name],
-                        color=color,
+                        where=band_idx,
+                        color=color_template(i),
                         label=label,
                     )
                 ax1.set_ylim([0, np.max(psd) * 1.1])
@@ -204,12 +167,14 @@ class PowerSpectrumAnalysis(OperatorMixin):
                 ax2.plot(freqs, psd, lw=1.5, color="k")
                 ax2.set_xlabel("Frequency (Hz)")
                 ax2.set_ylabel("Power spectral density (V^2 / Hz)")
-                for bands_name, color, label in bands:
-                    ax2.fill_between(
+                for i, (band_idx, label) in enumerate(
+                    zip(power_dict[chunk][channel]["psd_idx"], self.band_list)
+                ):
+                    ax1.fill_between(
                         freqs,
                         psd,
-                        where=power_dict[chunk][channel][bands_name],
-                        color=color,
+                        where=band_idx,
+                        color=color_template(i),
                         label=label,
                     )
                 ax2.set_ylim([0, np.max(psd) * 1.1])
@@ -220,16 +185,16 @@ class PowerSpectrumAnalysis(OperatorMixin):
                     plt.show()
                 if save_path is not None:
                     plot_path = os.path.join(
-                        save_path,
-                        f"Chunk{chunk}_periodogram_of_channel_{channel}.png",
+                        channel_folder,
+                        f"periodogram_{chunk:03d}.png",
                     )
                     plt.savefig(plot_path, dpi=300)
                 plt.close()
 
     def computing_ratio_and_bandpower(
         self,
-        psd_dict: Dict[int, Dict[str, Any]],
-        power_dict: Dict[int, Dict[str, Any]],
+        psd_dict: dict[int, dict[str, Any]],
+        power_dict: dict[int, dict[str, Any]],
         chunk_index: int,
     ):
         """
@@ -245,22 +210,8 @@ class PowerSpectrumAnalysis(OperatorMixin):
         for channel in psd_dict.keys():
             self.logger.info(f"Analysis of chunk {chunk_index}, channel {channel}\n")
 
-            band_names = ["delta", "theta", "alpha", "beta", "gamma"]
-            absolute_powers = [
-                power_dict[channel]["delta_power"],
-                power_dict[channel]["theta_power"],
-                power_dict[channel]["alpha_power"],
-                power_dict[channel]["beta_power"],
-                power_dict[channel]["gamma_power"],
-            ]
-
-            relative_powers = [
-                power_dict[channel]["delta_rel_power"],
-                power_dict[channel]["theta_rel_power"],
-                power_dict[channel]["alpha_rel_power"],
-                power_dict[channel]["beta_rel_power"],
-                power_dict[channel]["gamma_rel_power"],
-            ]
+            absolute_powers = power_dict[channel]["power_list"]
+            relative_powers = power_dict[channel]["rel_power_list"]
 
             for band in self.band_list:
                 multitaper_power = self.computing_bandpower(psd_dict[channel], band)
@@ -275,19 +226,19 @@ class PowerSpectrumAnalysis(OperatorMixin):
                 )
 
             for band, abs_power, rel_power in zip(
-                band_names, absolute_powers, relative_powers
+                self.band_list, absolute_powers, relative_powers
             ):
                 self.logger.info(
-                    f"Absolute {band} power (Welch) of channel {channel} is: {abs_power:.3f} uV^2\n"
+                    f"Absolute {band} power of channel {channel} is: {abs_power:.3f} uV^2\n"
                 )
                 self.logger.info(
-                    f"Relative {band} power (Welch) of channel {channel} is: {rel_power:.3f} uV^2\n\n"
+                    f"Relative {band} power of channel {channel} is: {rel_power:.3f} uV^2\n\n"
                 )
 
     def computing_bandpower(
         self,
         psd_dict_single_channel,
-        band: Tuple[float, float],
+        band: tuple[float, float],
         relative: bool = False,
     ) -> float:
         """

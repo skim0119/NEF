@@ -1,5 +1,7 @@
 import numpy as np
 import pytest
+from scipy.integrate import simpson
+
 from miv.core.datatype import Signal
 from spectrum_analysis import PowerSpectrumAnalysis
 from spectrogram_analysis import SpectrogramAnalysis
@@ -8,7 +10,6 @@ from power_density_statistics import (
     SpectrumAnalysisMultitaper,
     SpectrumAnalysisWelch,
 )
-from scipy.integrate import simpson
 
 
 def mock_signal_generator():
