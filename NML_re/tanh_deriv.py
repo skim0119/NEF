@@ -14,7 +14,7 @@ def tanh_deriv(d, n):
     D: Matrix of derivatives, where each column is the derivative of increasing order
     """
     # Define symbolic variable z
-    z = sp.Symbol('z', real=True)
+    z = sp.Symbol("z", real=True)
 
     # Initialize the tanh function
     D = [sp.tanh(z)]

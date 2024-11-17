@@ -9,8 +9,19 @@ beta = 0
 dt = 0.01
 delta_T = 260
 pc = 0.95
+
+
 class ReservoirComputing:
-    def __init__(self, num_neuron=N, sigma=sigma, alpha=alpha_values, delta_T=delta_T, beta=beta, dt=dt, Din=input_dimension):
+    def __init__(
+        self,
+        num_neuron=N,
+        sigma=sigma,
+        alpha=alpha_values,
+        delta_T=delta_T,
+        beta=beta,
+        dt=dt,
+        Din=input_dimension,
+    ):
         self.num_neuron = num_neuron
         self.sigma = sigma
         self.beta = beta
@@ -40,12 +51,15 @@ class ReservoirComputing:
             sum_U = 0
             # sum_U = np.dot(self.matrix_H, input)
 
-            theta_dot = (1 - alpha) * self.matrix_w.flatten() + (alpha / N) * sum_theta + self.beta * np.tanh(
-                self.matrix_B.flatten() + sum_U)
+            theta_dot = (
+                (1 - alpha) * self.matrix_w.flatten()
+                + (alpha / N) * sum_theta
+                + self.beta * np.tanh(self.matrix_B.flatten() + sum_U)
+            )
 
             self.theta += theta_dot * self.dt
 
-            #self.theta = np.unwrap(self.theta)
+            # self.theta = np.unwrap(self.theta)
             self.theta = np.mod(self.theta, 2 * np.pi)
 
             self.theta_list.append(np.copy(self.theta))
@@ -74,24 +88,23 @@ theta = RC.theta_process(np.zeros(1))
 p = RC.correlation_process()
 
 pcopy = np.copy(p)
-B = RC.binary_process(pcopy,pc)
+B = RC.binary_process(pcopy, pc)
 
 plt.subplot(1, 2, 1)
-plt.imshow(p, cmap='jet', interpolation='nearest', vmin=-1, vmax=1)
-plt.colorbar(label='Correlation Coefficient', shrink = 0.5)
-plt.title('Pairwise Correlation Matrix')
-plt.xlabel(r'Neuron $i$')
-plt.ylabel(r'Neuron $j$')
+plt.imshow(p, cmap="jet", interpolation="nearest", vmin=-1, vmax=1)
+plt.colorbar(label="Correlation Coefficient", shrink=0.5)
+plt.title("Pairwise Correlation Matrix")
+plt.xlabel(r"Neuron $i$")
+plt.ylabel(r"Neuron $j$")
 plt.gca().invert_yaxis()
 plt.grid(False)
 plt.subplot(1, 2, 2)
-plt.imshow(B, cmap='jet', interpolation='nearest', vmin=-1, vmax=1)
-plt.colorbar(label='Correlation Coefficient', shrink = 0.5)
-plt.title('Pairwise Correlation Matrix')
-plt.xlabel(r'Neuron $i$')
-plt.ylabel(r'Neuron $j$')
+plt.imshow(B, cmap="jet", interpolation="nearest", vmin=-1, vmax=1)
+plt.colorbar(label="Correlation Coefficient", shrink=0.5)
+plt.title("Pairwise Correlation Matrix")
+plt.xlabel(r"Neuron $i$")
+plt.ylabel(r"Neuron $j$")
 plt.gca().invert_yaxis()
 plt.grid(False)
 
 plt.show()
-

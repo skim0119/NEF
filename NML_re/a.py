@@ -15,7 +15,7 @@ from Thomas import Thomas
 
 np.random.seed(0)
 
-#Reservoir parameters
+# Reservoir parameters
 dt = 0.25
 gam = 300
 num_neuron = 2000
@@ -28,11 +28,13 @@ rs1 = np.random.rand(num_neuron, 1) - 0.5
 rs1 = rs1
 xs1 = np.array(np.zeros([1024, 1])).reshape(1024, 1)
 
-R1 = ReservoirTanhB(A1,B1,rs1,xs1,dt,gam)  # RNN class
+R1 = ReservoirTanhB(A1, B1, rs1, xs1, dt, gam)  # RNN class
 R1.r = rs1
 d1 = R1.d
 
-_, C1, C1a, *_ = decomp_poly4_ns(A1, B1, rs1, A1 @ rs1 + B1 @ xs1 + d1, gam, 3, 1024) # Polynomial expansion
+_, C1, C1a, *_ = decomp_poly4_ns(
+    A1, B1, rs1, A1 @ rs1 + B1 @ xs1 + d1, gam, 3, 1024
+)  # Polynomial expansion
 
 RsNPL1 = np.hstack([C1, C1a.reshape(num_neuron, C1a.shape[1] * 3)])
 print(RsNPL1.shape)
@@ -42,39 +44,48 @@ N = 1024
 x = np.linspace(0, 60, N)
 a = -1
 b = 1
-u = 0.5*np.cos(x/16)*(1+np.sin(x/16))
+u = 0.5 * np.cos(x / 16) * (1 + np.sin(x / 16))
 v = np.fft.fft(u)
 # scalars for ETDRK4
 h = 0.25
-k = np.transpose(np.conj(np.concatenate((np.arange(0, N/2), np.array([0]), np.arange(-N/2+1, 0))))) / 16
+k = (
+    np.transpose(
+        np.conj(
+            np.concatenate(
+                (np.arange(0, N / 2), np.array([0]), np.arange(-N / 2 + 1, 0))
+            )
+        )
+    )
+    / 16
+)
 L = k**2 - k**4
-E = np.exp(h*L)
-E_2 = np.exp(h*L/2)
+E = np.exp(h * L)
+E_2 = np.exp(h * L / 2)
 M = 16
-r = np.exp(1j*np.pi*(np.arange(1, M+1)-0.5) / M)
-LR = h*np.transpose(np.repeat([L], M, axis=0)) + np.repeat([r], N, axis=0)
-Q = h*np.real(np.mean((np.exp(LR/2)-1)/LR, axis=1))
-f1 = h*np.real(np.mean((-4-LR+np.exp(LR)*(4-3*LR+LR**2))/LR**3, axis=1))
-f2 = h*np.real(np.mean((2+LR+np.exp(LR)*(-2+LR))/LR**3, axis=1))
-f3 = h*np.real(np.mean((-4-3*LR-LR**2+np.exp(LR)*(4-LR))/LR**3, axis=1))
+r = np.exp(1j * np.pi * (np.arange(1, M + 1) - 0.5) / M)
+LR = h * np.transpose(np.repeat([L], M, axis=0)) + np.repeat([r], N, axis=0)
+Q = h * np.real(np.mean((np.exp(LR / 2) - 1) / LR, axis=1))
+f1 = h * np.real(np.mean((-4 - LR + np.exp(LR) * (4 - 3 * LR + LR**2)) / LR**3, axis=1))
+f2 = h * np.real(np.mean((2 + LR + np.exp(LR) * (-2 + LR)) / LR**3, axis=1))
+f3 = h * np.real(np.mean((-4 - 3 * LR - LR**2 + np.exp(LR) * (4 - LR)) / LR**3, axis=1))
 # main loop
 uu = np.array([u])
 tt = 0
 tmax = 300
-nmax = round(tmax/h)
+nmax = round(tmax / h)
 nplt = 1
-g = -0.5j*k
-for n in range(1, nmax+1):
-    t = n*h
-    Nv = g*np.fft.fft(np.real(np.fft.ifft(v))**2)
-    a = E_2*v + Q*Nv
-    Na = g*np.fft.fft(np.real(np.fft.ifft(a))**2)
-    b = E_2*v + Q*Na
-    Nb = g*np.fft.fft(np.real(np.fft.ifft(b))**2)
-    c = E_2*a + Q*(2*Nb-Nv)
-    Nc = g*np.fft.fft(np.real(np.fft.ifft(c))**2)
-    v = E*v + Nv*f1 + 2*(Na+Nb)*f2 + Nc*f3
-    if n%nplt == 0:
+g = -0.5j * k
+for n in range(1, nmax + 1):
+    t = n * h
+    Nv = g * np.fft.fft(np.real(np.fft.ifft(v)) ** 2)
+    a = E_2 * v + Q * Nv
+    Na = g * np.fft.fft(np.real(np.fft.ifft(a)) ** 2)
+    b = E_2 * v + Q * Na
+    Nb = g * np.fft.fft(np.real(np.fft.ifft(b)) ** 2)
+    c = E_2 * a + Q * (2 * Nb - Nv)
+    Nc = g * np.fft.fft(np.real(np.fft.ifft(c)) ** 2)
+    v = E * v + Nv * f1 + 2 * (Na + Nb) * f2 + Nc * f3
+    if n % nplt == 0:
         u = np.real(np.fft.ifft(v))
         uu = np.append(uu, np.array([u]), axis=0)
         tt = np.hstack((tt, t))
@@ -83,10 +94,10 @@ print(nmax)
 print(uu.shape)
 print(tt.shape)
 
-OsNPL1 = np.zeros((N, uu.shape[0]-1))
+OsNPL1 = np.zeros((N, uu.shape[0] - 1))
 OsNPL1 = uu
 
-W1, _, _, _ = lstsq(RsNPL1.T, OsNPL1.T, lapack_driver='gelsy')
+W1, _, _, _ = lstsq(RsNPL1.T, OsNPL1.T, lapack_driver="gelsy")
 W1 = W1.T
 
 """

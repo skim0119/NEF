@@ -4,24 +4,30 @@ from scipy.integrate import odeint
 from sklearn.linear_model import Ridge
 from scipy.signal import argrelextrema
 
-#define lorenz system
+
+# define lorenz system
 def lorenz_system(state, t):
     x, y, z = state
     a = 10
     b = 28
-    c = 8.0/3.0
-    return [a*(y-x), x*(b-z)-y, x*y-c*z]
+    c = 8.0 / 3.0
+    return [a * (y - x), x * (b - z) - y, x * y - c * z]
 
-#define RC
+
+# define RC
 class ReservoirComputing:
-    def __init__(self, num_neuron=300, spectral_radius=1.2, sigma=0.1, sparsity=0.98, beta=0.0):
+    def __init__(
+        self, num_neuron=300, spectral_radius=1.2, sigma=0.1, sparsity=0.98, beta=0.0
+    ):
         self.num_neuron = num_neuron
         self.spectral_radius = spectral_radius
         self.sigma = sigma
         self.beta = beta
         self.Win = np.random.uniform(-sigma, sigma, (num_neuron, 3))
         self.recurrent_matrix = np.random.rand(num_neuron, num_neuron) - 0.5
-        self.recurrent_matrix[np.random.rand(*self.recurrent_matrix.shape) < sparsity] = 0
+        self.recurrent_matrix[
+            np.random.rand(*self.recurrent_matrix.shape) < sparsity
+        ] = 0
         rho_A = max(abs(np.linalg.eigvals(self.recurrent_matrix)))
         self.recurrent_matrix *= spectral_radius / rho_A
 
@@ -31,7 +37,9 @@ class ReservoirComputing:
         steps = inputs.shape[0]
         state_history = np.zeros((steps, self.num_neuron))
         for t in range(steps):
-            self.state = np.tanh(np.dot(self.recurrent_matrix, self.state) + np.dot(self.Win, inputs[t]))
+            self.state = np.tanh(
+                np.dot(self.recurrent_matrix, self.state) + np.dot(self.Win, inputs[t])
+            )
             state_history[t, :] = self.state
 
         self.model = Ridge(alpha=self.beta, fit_intercept=False)
@@ -43,11 +51,15 @@ class ReservoirComputing:
         prediction = np.zeros((steps, 3))
 
         for t in range(steps):
-            self.state = np.tanh(np.dot(self.recurrent_matrix, self.state) + np.dot(self.Win, self.model.predict(self.state[None,:])[0]))
+            self.state = np.tanh(
+                np.dot(self.recurrent_matrix, self.state)
+                + np.dot(self.Win, self.model.predict(self.state[None, :])[0])
+            )
 
-            prediction[t, :] = self.model.predict(self.state[None,:])[0]
+            prediction[t, :] = self.model.predict(self.state[None, :])[0]
 
         return prediction
+
 
 # simulation parameter
 T_train = 5000
@@ -65,10 +77,10 @@ print(data_test.shape)
 
 RC = ReservoirComputing()
 
-#train
+# train
 reservoir_states = RC.train(data_train)
 
-#predict
+# predict
 prediction = RC.prediction(data_test.shape[0])
 
 test_maxima_indices = argrelextrema(data_test[:, 2], np.greater)[0]
@@ -77,14 +89,16 @@ predicted_maxima_indices = argrelextrema(prediction[:, 2], np.greater)[0]
 test_maxima = data_test[test_maxima_indices, 2]
 predicted_maxima = prediction[predicted_maxima_indices, 2]
 
-#plot
-fig, ax = plt.subplots(2, 1, figsize = (10, 6))
-ax[0].scatter(test_maxima[:-1], test_maxima[1:], c = 'blue', label="Actual Maxima")
-ax[0].scatter(predicted_maxima[:-1], predicted_maxima[1:], c = 'red', label="Predicted Maxima")
-ax[0].set_xlim(25,50)
-ax[0].set_ylim(25,50)
-ax[0].set_xlabel(r'$z_i$')
-ax[0].set_ylabel(r'$z_{z+1}$')
+# plot
+fig, ax = plt.subplots(2, 1, figsize=(10, 6))
+ax[0].scatter(test_maxima[:-1], test_maxima[1:], c="blue", label="Actual Maxima")
+ax[0].scatter(
+    predicted_maxima[:-1], predicted_maxima[1:], c="red", label="Predicted Maxima"
+)
+ax[0].set_xlim(25, 50)
+ax[0].set_ylim(25, 50)
+ax[0].set_xlabel(r"$z_i$")
+ax[0].set_ylabel(r"$z_{z+1}$")
 
 
 plt.show()

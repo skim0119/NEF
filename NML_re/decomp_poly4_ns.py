@@ -8,6 +8,7 @@ from tanh_deriv import tanh_deriv
 #     """Placeholder for tanh_deriv function"""
 #     pass
 
+
 def decomp_poly4_ns(A, B, rs, dv, gam, o):
     """
     Function to decompose reservoir parameters into polynomial basis.
@@ -36,7 +37,7 @@ def decomp_poly4_ns(A, B, rs, dv, gam, o):
 
     for i in range(2, o):
         Pdp = Pd1 + v
-        Pdp = Pdp.reshape(-1, 3, order='F')
+        Pdp = Pdp.reshape(-1, 3, order="F")
         Pd1 = np.vstack([Pd1, Pdp])
         _, unique_idx = np.unique(Pd1, axis=0, return_index=True)
         Pd1 = Pd1[np.sort(unique_idx)]
@@ -60,7 +61,9 @@ def decomp_poly4_ns(A, B, rs, dv, gam, o):
         Bc[i] = np.zeros((1, len(PdI)))  # 创建 (1, len(PdI)) 的二维数组
         for j in range(len(PdI)):
             Bk[i][:, j] = np.prod(B ** Pd1[PdI[j], :], axis=1)
-            Bc[i][0, j] = factorial(i) / np.prod(factorial(Pd1[PdI[j], :]))  # 保持 Bc 是二维数组
+            Bc[i][0, j] = factorial(i) / np.prod(
+                factorial(Pd1[PdI[j], :])
+            )  # 保持 Bc 是二维数组
 
         Bk[i - 1] = Bk[i]
         Bc[i - 1] = Bc[i]
@@ -81,24 +84,31 @@ def decomp_poly4_ns(A, B, rs, dv, gam, o):
     AsI3 = AsI2 @ AsI
     AsI4 = AsI3 @ AsI
 
-
     # Sole higher derivative terms
     CM = DD[:, :4].reshape(N, 1, 4)
 
     for j in range(1, o):
-        #print((Bc[j - 1] * Bk[j - 1]).shape
-        CM = np.concatenate((CM, (DD[:, j:j+4].reshape(N, 1, 4)) *
-                             ((Bc[j - 1] * Bk[j - 1])[:,:,np.newaxis] / factorial(j - 1))), axis=1)
-        #print(CM.shape)
+        # print((Bc[j - 1] * Bk[j - 1]).shape
+        CM = np.concatenate(
+            (
+                CM,
+                (DD[:, j : j + 4].reshape(N, 1, 4))
+                * ((Bc[j - 1] * Bk[j - 1])[:, :, np.newaxis] / factorial(j - 1)),
+            ),
+            axis=1,
+        )
+        # print(CM.shape)
     # xdot terms
 
     C1 = np.linalg.solve(As, CM[:, :, 0])
 
     CM_1 = CM[:, :, 1]
     CM_1 = CM_1[:, :, np.newaxis]
-    C2 = np.zeros((N, 10, o))  #need to be changed
-    for i in range (0, o):
-        C2[:, :, i] = AsI2 @ (CM_1 * (Bc[0] * Bk[0]).reshape(N, 1, Bc[0].shape[1]) / gam)[:, :, i]
+    C2 = np.zeros((N, 10, o))  # need to be changed
+    for i in range(0, o):
+        C2[:, :, i] = (
+            AsI2 @ (CM_1 * (Bc[0] * Bk[0]).reshape(N, 1, Bc[0].shape[1]) / gam)[:, :, i]
+        )
 
     C3b = np.zeros((N, 10, o))
     for i in range(o):
@@ -114,20 +124,27 @@ def decomp_poly4_ns(A, B, rs, dv, gam, o):
     CM_2 = CM_2[:, :, np.newaxis]
     C3a = np.zeros((N, 10, o))
     for i in range(o):
-        C3a[:, :, i] = AsI3 @ (CM_2 * (Bc[1] * Bk[1]).reshape(N, 1, Bc[1].shape[1]) / gam ** 2)[:, :, i]
-
+        C3a[:, :, i] = (
+            AsI3
+            @ (CM_2 * (Bc[1] * Bk[1]).reshape(N, 1, Bc[1].shape[1]) / gam**2)[:, :, i]
+        )
 
     # 计算 xdot^2 terms - C4b
     C4b = np.zeros((N, 10, o))
     for i in range(o):
-        C4b[:, :, i] = 3 * AsI4 @ (CM_2 * Bk[1].reshape(N, 1, Bc[1].shape[1]) / gam ** 3)[:, :, i]
+        C4b[:, :, i] = (
+            3 * AsI4 @ (CM_2 * Bk[1].reshape(N, 1, Bc[1].shape[1]) / gam**3)[:, :, i]
+        )
 
     # 计算 xdot^3 terms - C4a
     CM_3 = CM[:, :, 3]
     CM_3 = CM_3[:, :, np.newaxis]
     C4a = np.zeros((N, 10, o))
     for i in range(o):
-        C4a[:, :, i] = AsI4 @ (CM_3 * (Bc[2] * Bk[2]).reshape(N, 1, Bc[2].shape[1]) / gam ** 3)[:, :, i]
+        C4a[:, :, i] = (
+            AsI4
+            @ (CM_3 * (Bc[2] * Bk[2]).reshape(N, 1, Bc[2].shape[1]) / gam**3)[:, :, i]
+        )
 
     print("Complete")
 
