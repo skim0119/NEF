@@ -3,9 +3,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal as sig
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import defaultdict
-from typing import List, Tuple, Dict, Any, Generator, Optional
+from typing import Tuple, Dict, Any
 
 from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
@@ -63,8 +63,8 @@ class SpectrogramAnalysis(OperatorMixin):
 
         nperseg = int(signal.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
-        for channel in range(signal.number_of_channels):
-            signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
+        for channel, channel_signal in enumerate(signal):
+            signal_no_bias = channel_signal - np.mean(channel_signal)
             frequencies, times, Sxx = sig.spectrogram(
                 signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap
             )
@@ -158,4 +158,4 @@ class SpectrogramAnalysis(OperatorMixin):
                         save_path, f"Chunk{chunk}_Spectrogram_Channel_{channel}.png"
                     )
                     plt.savefig(plot_path, dpi=300)
-                plt.close()
+                plt.close('all')
