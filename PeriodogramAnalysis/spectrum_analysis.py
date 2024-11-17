@@ -25,7 +25,7 @@ class PowerSpectrumAnalysis(OperatorMixin):
         Frequency bands to analyze, default is [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]], i.e. the five common frequency bands.
     """
 
-    band_list: tuple[tuple[int, int], ...] = (
+    band_list: tuple[tuple[float, float], ...] = (
         (0.5, 4),
         (4, 8),
         (8, 12),
@@ -85,7 +85,7 @@ class PowerSpectrumAnalysis(OperatorMixin):
         power_dict
             Dictionary containing power values for all channels in this chunk.
         """
-        power_dict: dict[int, dict[str, Any]] = defaultdict(list)
+        power_dict: dict[int, dict[str, Any]] = {}
 
         for channel in psd_dict.keys():
             freqs = psd_dict[channel]["freqs"]
@@ -139,8 +139,9 @@ class PowerSpectrumAnalysis(OperatorMixin):
 
         for chunk in psd_dict.keys():
             for channel in psd_dict[chunk].keys():
-                channel_folder = os.path.join(save_path, f"channel{channel:03d}")
-                os.makedirs(channel_folder, exist_ok=True)
+                if save_path is not None:
+                    channel_folder = os.path.join(save_path, f"channel{channel:03d}")
+                    os.makedirs(channel_folder, exist_ok=True)
 
                 freqs = psd_dict[chunk][channel]["freqs"]
                 psd = psd_dict[chunk][channel]["psd"]
