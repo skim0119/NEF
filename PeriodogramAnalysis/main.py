@@ -1,12 +1,12 @@
 from miv.core.operator import DataLoader
 from miv.io.openephys import DataManager
 from miv.core.pipeline import Pipeline
-from PowerSpectrumAnalysis import PowerSpectrumAnalysis
-from SpectrogramAnalysis import SpectrogramAnalysis
+from spectrum_analysis import PowerSpectrumAnalysis
+from spectrogram_analysis import SpectrogramAnalysis
 from miv.datasets.openephys_sample import load_data
 from miv.signal.filter import ButterBandpass, MedianFilter
 from miv.core.operator import Operator, DataLoader
-from Power_Spectral_Density import SpectrumAnalysisPeriodogram, SpectrumAnalysisMultitaper, SpectrumAnalysisWelch
+from power_density_statistics import SpectrumAnalysisPeriodogram, SpectrumAnalysisMultitaper, SpectrumAnalysisWelch
 
 working_directory = "results"
 path: str = "/Users/aia/Downloads/2024-08-25_19-49-12"

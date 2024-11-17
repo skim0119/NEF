@@ -12,7 +12,7 @@ from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
-from MultitaperPowerSpectrum import multitaper_psd
+from multitaper_spectrum_statistics import multitaper_psd
 
 
 @dataclass
