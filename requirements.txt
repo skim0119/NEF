@@ -1,0 +1,6 @@
+miv-os
+numpy
+scipy
+matplotlib
+pytest
+pytest-cov
