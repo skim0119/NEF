@@ -24,7 +24,13 @@ class PowerSpectrumAnalysis(OperatorMixin):
         Frequency bands to analyze, default is [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]], i.e. the five common frequency bands in EEG.
     """
 
-    band_list: tuple = ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100))
+    band_list: tuple[tuple[int, int], ...] = (
+        (0.5, 4),
+        (4, 8),
+        (8, 12),
+        (12, 30),
+        (30, 100),
+    )
     tag: str = "PowerSpectrum Analysis"
 
     def __post_init__(self):
