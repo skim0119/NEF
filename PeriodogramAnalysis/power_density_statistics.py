@@ -23,12 +23,15 @@ class SpectrumAnalysisBase(OperatorMixin):
 
     Attributes
     ----------
+    window_length_for_welch : int
+        The length of the window for Welch's method, defined as a multiple of the signal's sampling rate. Default is 4.
     band_display : Tuple[float, float]
         The frequency band range to display on the plot. Default is (0, 100) Hz.
     tag : str
         A string representing the tag used as the title of the plot. Default is "Base PSD Analysis".
     """
 
+    window_length_for_welch: int = 4
     band_display: tuple[float, float] = (0, 100)
     tag: str = "Base PSD spectrum analysis"
 
@@ -36,14 +39,32 @@ class SpectrumAnalysisBase(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(self, signal: SignalType) -> dict[int, dict[int, dict[str, Any]]]:
+    def __call__(self, signal: SignalType) -> dict[int, dict[str, Any]]:
+        """
+        Compute the Power Spectral Density (PSD) for each chunk of the given signal.
 
-        psd_dict: dict[int, dict[int, dict[str, Any]]] = defaultdict(dict)
+        Parameters
+        ----------
+        signal : SignalType
+            The input signal to be analyzed.
+
+        Returns
+        -------
+        dict[int, dict[str, Any]]
+            A dictionary where the keys are channel indices, and each value is another dictionary containing
+            the PSD data for the specified channels. The inner dictionary includes keys such as:
+            - "freqs": A NumPy array of frequency values in Hz.
+            - "psd": A NumPy array of PSD values.
+        """
+
+        psd_dict: dict[int, dict[str, Any]] = defaultdict(dict)
         for chunk_idx, signal_piece in enumerate(signal):
-            psd_dict[chunk_idx] = self.compute_psd(signal_piece)
+            psd_dict = self.compute_psd(signal_piece, psd_dict)
         return psd_dict
 
-    def compute_psd(self, signal: Signal) -> dict[int, dict[str, Any]]:
+    def compute_psd(
+        self, signal: Signal, psd_dict: dict[int, dict[str, Any]]
+    ) -> dict[int, dict[str, Any]]:
         """
         compute_psd(signal: Signal) -> Dict[int, Dict[str, Any]]:
         Abstract method to be overridden in subclasses to compute the PSD for a given signal.
@@ -74,15 +95,15 @@ class SpectrumAnalysisBase(OperatorMixin):
             The path to save the plot. If None, the plot is not saved. Default is None.
         """
         psd_dict = output
-        for chunk in psd_dict.keys():
-            for channel in psd_dict[chunk].keys():
+        for channel in psd_dict.keys():
+            for chunk in range(len(psd_dict[channel]["freqs"])):
                 if save_path is not None:
                     channel_folder = os.path.join(save_path, f"channel{channel:03d}")
                     os.makedirs(channel_folder, exist_ok=True)
 
                 plt.plot(
-                    psd_dict[chunk][channel]["freqs"],
-                    psd_dict[chunk][channel]["psd"],
+                    psd_dict[channel]["freqs"][chunk],
+                    psd_dict[channel]["psd"][chunk],
                     lw=1,
                     color="k",
                 )
@@ -106,77 +127,66 @@ class SpectrumAnalysisBase(OperatorMixin):
 class SpectrumAnalysisWelch(SpectrumAnalysisBase):
     """
     A class that performs spectral analysis using the Welch method.
-
-    Attributes
-    ----------
-    window_length_for_welch : int
-        The length of the window for Welch's method, defined as a multiple of the signal's sampling rate. Default is 4.
-    band_display : Tuple[float, float]
-        The frequency band range to display on the plot. Default is (0, 100) Hz.
-    tag : str
-        A string representing the tag used as the title of the plot. Default is "Welch PSD".
     """
 
-    window_length_for_welch: int = 4
-    band_display: tuple[float, float] = (0, 100)
     tag: str = "Welch PSD spectrum analysis"
 
-    def compute_psd(self, signal: Signal) -> dict[int, dict[str, Any]]:
-        """
-        Compute the power spectral density (PSD) for a given signal using Welch's method.
-
-        Parameters
-        ----------
-        signal : Signal
-            A 2-dimensional signal object, with the shape (length, number_of_channels).
-
-        Returns
-        -------
-        Dict[int, Dict[str, Any]]
-            A dictionary containing the PSD data for each channel, with keys representing the channel number.
-            Each entry contains a dictionary with:
-            - 'freqs': The frequency bins.
-            - 'psd': The PSD values at each frequency.
-        """
+    def compute_psd(
+        self, signal: Signal, psd_welch_dict: dict[int, dict[str, Any]]
+    ) -> dict[int, dict[str, Any]]:
         win = self.window_length_for_welch * signal.rate
-        psd_welch_dict: dict[int, dict[str, Any]] = defaultdict(dict)
 
-        for channel, channel_signal in enumerate(signal):
+        for channel_index, channel_signal in enumerate(signal):
             signal_no_bias = channel_signal - np.mean(channel_signal)
             freqs, psd = scipy.signal.welch(
                 signal_no_bias, fs=signal.rate, nperseg=win, nfft=4 * win
             )
-            psd_welch_dict[channel] = {"freqs": freqs, "psd": psd}
+            if channel_index not in psd_welch_dict:
+                psd_welch_dict[channel_index] = {"freqs": [], "psd": []}
+            psd_welch_dict[channel_index]["freqs"].append(freqs)
+            psd_welch_dict[channel_index]["psd"].append(psd)
         return psd_welch_dict
 
 
 @dataclass
 class SpectrumAnalysisPeriodogram(SpectrumAnalysisBase):
-    band_display: tuple[float, float] = (0, 100)
+    """
+    A class that performs spectral analysis using the Periodogram method.
+    """
     tag: str = "Periodogram PSD spectrum analysis"
 
-    def compute_psd(self, signal: Signal) -> dict[int, dict[str, Any]]:
-        psd_periodogram_dict: dict[int, dict[str, Any]] = defaultdict(dict)
-
-        for channel, channel_signal in enumerate(signal):
+    def compute_psd(
+        self, signal: Signal, psd_periodogram_dict: dict[int, dict[str, Any]]
+    ) -> dict[int, dict[str, Any]]:
+        for channel_index, channel_signal in enumerate(signal):
             signal_no_bias = channel_signal - np.mean(channel_signal)
             freqs, psd = scipy.signal.periodogram(signal_no_bias, signal.rate)
-            psd_periodogram_dict[channel] = {"freqs": freqs, "psd": psd}
+
+            if channel_index not in psd_periodogram_dict:
+                psd_periodogram_dict[channel_index] = {"freqs": [], "psd": []}
+            psd_periodogram_dict[channel_index]["freqs"].append(freqs)
+            psd_periodogram_dict[channel_index]["psd"].append(psd)
 
         return psd_periodogram_dict
 
 
 @dataclass
 class SpectrumAnalysisMultitaper(SpectrumAnalysisBase):
-    band_display: tuple[float, float] = (0, 100)
+    """
+    A class that performs spectral analysis using the Multitaper method.
+    """
     tag: str = "Multitaper PSD spectrum analysis"
 
-    def compute_psd(self, signal: Signal) -> dict[int, dict[str, Any]]:
-        psd_multitaper_dict: dict[int, dict[str, Any]] = defaultdict(dict)
-
-        for channel, channel_signal in enumerate(signal):
+    def compute_psd(
+        self, signal: Signal, psd_multitaper_dict: dict[int, dict[str, Any]]
+    ) -> dict[int, dict[str, Any]]:
+        for channel_index, channel_signal in enumerate(signal):
             signal_no_bias = channel_signal - np.mean(channel_signal)
             psd, freqs = multitaper_psd(signal_no_bias, signal.rate)
-            psd_multitaper_dict[channel] = {"freqs": freqs, "psd": psd}
+
+            if channel_index not in psd_multitaper_dict:
+                psd_multitaper_dict[channel_index] = {"freqs": [], "psd": []}
+            psd_multitaper_dict[channel_index]["freqs"].append(freqs)
+            psd_multitaper_dict[channel_index]["psd"].append(psd)
 
         return psd_multitaper_dict

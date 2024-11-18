@@ -39,10 +39,8 @@ class PowerSpectrumAnalysis(OperatorMixin):
 
     @cache_call
     def __call__(
-        self, psd_dict: dict[int, dict[int, dict[str, Any]]]
-    ) -> tuple[
-        dict[int, dict[int, dict[str, Any]]], dict[int, dict[int, dict[str, Any]]]
-    ]:
+        self, psd_dict: dict[int, dict[str, Any]]
+    ) -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]]:
         """
         Perform the periodogram analysis on the given signal.
 
@@ -58,20 +56,26 @@ class PowerSpectrumAnalysis(OperatorMixin):
         power_dict
             power dictionary
         """
-        power_dict: dict[int, dict[int, dict[str, Any]]] = defaultdict(dict)
-        for chunk_idx in psd_dict.keys():
-            power_dict[chunk_idx] = self.computing_absolute_and_relative_power(
-                psd_dict[chunk_idx]
+        power_dict: dict[int, dict[str, Any]] = defaultdict(dict)
+        for channel in psd_dict.keys():
+            if channel not in power_dict:
+                power_dict[channel] = {
+                    "psd_idx": [],
+                    "power_list": [],
+                    "rel_power_list": [],
+                }
+            power_dict[channel] = self.computing_absolute_and_relative_power(
+                psd_dict[channel], power_dict[channel]
             )
             self.computing_ratio_and_bandpower(
-                psd_dict[chunk_idx], power_dict[chunk_idx], chunk_idx
+                psd_dict[channel], power_dict[channel], channel
             )
 
         return psd_dict, power_dict
 
     def computing_absolute_and_relative_power(
-        self, psd_dict: dict[int, dict[str, Any]]
-    ) -> dict[int, dict[str, Any]]:
+        self, psd_dict: dict[str, Any], power_dict: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Compute absolute and relative power for different frequency bands.
 
@@ -83,22 +87,14 @@ class PowerSpectrumAnalysis(OperatorMixin):
         Returns:
         --------
         power_dict
-            Dictionary containing power values for all channels in this chunk.
+            Dictionary containing power values.
         """
-        power_dict: dict[int, dict[str, Any]] = {}
 
-        for channel in psd_dict.keys():
-            freqs = psd_dict[channel]["freqs"]
-            psd = psd_dict[channel]["psd"]
+        for chunk in range(len(psd_dict["freqs"])):
+            freqs = psd_dict["freqs"][chunk]
+            psd = psd_dict["psd"][chunk]
             freq_res = freqs[1] - freqs[0]
             total_power = simpson(psd, dx=freq_res)
-
-            if channel not in power_dict:
-                power_dict[channel] = {
-                    "psd_idx": [],
-                    "power_list": [],
-                    "rel_power_list": [],
-                }
 
             for band in self.band_list:
                 psd_idx = np.logical_and(freqs >= band[0], freqs <= band[1])
@@ -106,9 +102,9 @@ class PowerSpectrumAnalysis(OperatorMixin):
                 power = simpson(psd[psd_idx], dx=freq_res)
                 rel_power = power / total_power
 
-                power_dict[channel]["psd_idx"].append(psd_idx)
-                power_dict[channel]["power_list"].append(power)
-                power_dict[channel]["rel_power_list"].append(rel_power)
+                power_dict["psd_idx"].append(psd_idx)
+                power_dict["power_list"].append(power)
+                power_dict["rel_power_list"].append(rel_power)
 
         return power_dict
 
@@ -131,33 +127,38 @@ class PowerSpectrumAnalysis(OperatorMixin):
         save_path : str
             Path to save the plot.
         """
-        color_template = plt.cm.get_cmap(
-            "tab20", len(self.band_list)
-        )  # 使用 'tab20' 配色方案
+        color_template = plt.cm.get_cmap("tab20", len(self.band_list))
         psd_dict = output[0]
         power_dict = output[1]
 
-        for chunk in psd_dict.keys():
-            for channel in psd_dict[chunk].keys():
+        for channel in psd_dict.keys():
+            for chunk in range(len(psd_dict[channel]["freqs"])):
                 if save_path is not None:
                     channel_folder = os.path.join(save_path, f"channel{channel:03d}")
                     os.makedirs(channel_folder, exist_ok=True)
 
-                freqs = psd_dict[chunk][channel]["freqs"]
-                psd = psd_dict[chunk][channel]["psd"]
+                freqs = psd_dict[channel]["freqs"][chunk]
+                psd = psd_dict[channel]["psd"][chunk]
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
 
                 ax1.semilogx(freqs, psd, lw=1.5, color="k")
                 ax1.set_xlabel("Frequency (Hz)")
                 ax1.set_ylabel("Power spectral density (V^2 / Hz)")
                 ax1.set_title(f"Welch's periodogram of channel {channel}")
-                for i, (band_idx, label) in enumerate(
-                    zip(power_dict[chunk][channel]["psd_idx"], self.band_list)
+                for i, (band_idx_list, label) in enumerate(
+                    zip(
+                        power_dict[channel]["psd_idx"][
+                            chunk
+                            * len(self.band_list) : (chunk + 1)
+                            * len(self.band_list)
+                        ],
+                        self.band_list,
+                    )
                 ):
                     ax1.fill_between(
                         freqs,
                         psd,
-                        where=band_idx,
+                        where=band_idx_list,
                         color=color_template(i),
                         label=label,
                     )
@@ -168,13 +169,20 @@ class PowerSpectrumAnalysis(OperatorMixin):
                 ax2.plot(freqs, psd, lw=1.5, color="k")
                 ax2.set_xlabel("Frequency (Hz)")
                 ax2.set_ylabel("Power spectral density (V^2 / Hz)")
-                for i, (band_idx, label) in enumerate(
-                    zip(power_dict[chunk][channel]["psd_idx"], self.band_list)
+                for i, (band_idx_list, label) in enumerate(
+                    zip(
+                        power_dict[channel]["psd_idx"][
+                            chunk
+                            * len(self.band_list) : (chunk + 1)
+                            * len(self.band_list)
+                        ],
+                        self.band_list,
+                    )
                 ):
-                    ax1.fill_between(
+                    ax2.fill_between(
                         freqs,
                         psd,
-                        where=band_idx,
+                        where=band_idx_list,
                         color=color_template(i),
                         label=label,
                     )
@@ -193,10 +201,7 @@ class PowerSpectrumAnalysis(OperatorMixin):
                 plt.close()
 
     def computing_ratio_and_bandpower(
-        self,
-        psd_dict: dict[int, dict[str, Any]],
-        power_dict: dict[int, dict[str, Any]],
-        chunk_index: int,
+        self, psd_dict: dict[str, Any], power_dict: dict[str, Any], channel
     ):
         """
         Compute power ratios and band powers for specific bands.
@@ -208,16 +213,25 @@ class PowerSpectrumAnalysis(OperatorMixin):
         power_dict : dict
             Dictionary containing power values of each channel in this chunk.
         """
-        for channel in psd_dict.keys():
-            self.logger.info(f"Analysis of chunk {chunk_index}, channel {channel}\n")
+        for chunk in range(len(psd_dict["freqs"])):
+            self.logger.info(f"Analysis of chunk {chunk}, channel {channel}\n")
 
-            absolute_powers = power_dict[channel]["power_list"]
-            relative_powers = power_dict[channel]["rel_power_list"]
+            absolute_powers = power_dict["power_list"][
+                (chunk * len(self.band_list)) : ((chunk + 1) * len(self.band_list))
+            ]
+            relative_powers = power_dict["rel_power_list"][
+                (chunk * len(self.band_list)) : ((chunk + 1) * len(self.band_list))
+            ]
 
             for band in self.band_list:
-                multitaper_power = self.computing_bandpower(psd_dict[channel], band)
+                multitaper_power = self.computing_bandpower(
+                    psd_dict["freqs"][chunk], psd_dict["psd"][chunk], band
+                )
                 multitaper_power_rel = self.computing_bandpower(
-                    psd_dict[channel], band, relative=True
+                    psd_dict["freqs"][chunk],
+                    psd_dict["psd"][chunk],
+                    band,
+                    relative=True,
                 )
                 self.logger.info(
                     f"{band[0]}Hz to {band[1]}Hz: Power (absolute): {multitaper_power:.3f}\n"
@@ -238,7 +252,8 @@ class PowerSpectrumAnalysis(OperatorMixin):
 
     def computing_bandpower(
         self,
-        psd_dict_single_channel,
+        freqs: np.ndarray,
+        psd: np.ndarray,
         band: tuple[float, float],
         relative: bool = False,
     ) -> float:
@@ -247,15 +262,15 @@ class PowerSpectrumAnalysis(OperatorMixin):
 
         Parameters
         ----------
-        psd_dict_single_channel : dict
-            A dictionary containing the PSD data for a single channel. It must include the following keys:
-            - "psd": A NumPy array of PSD values.
-            - "freqs": A NumPy array of corresponding frequency values in Hz.
+        freqs : np.ndarray
+            A NumPy array containing the frequency values in Hz corresponding to the PSD data.
+        psd : np.ndarray
+            A NumPy array containing the power spectral density values.
         band : tuple of float
-            The frequency band for which to calculate the power.
+            A tuple representing the frequency band (low, high) in Hz for which to calculate the power.
         relative : bool, optional
-            If set to True, the method returns the relative power within the specified band by dividing the
-            band power by the total power across all frequencies.
+            If True, returns the relative power within the specified band by dividing the band power
+            by the total power across all frequencies. Default is False.
 
         Returns
         -------
@@ -263,8 +278,6 @@ class PowerSpectrumAnalysis(OperatorMixin):
             The calculated power within the specified frequency band.
         """
         low, high = band
-        psd = psd_dict_single_channel["psd"]
-        freqs = psd_dict_single_channel["freqs"]
         freq_res = freqs[1] - freqs[0]
         idx_band = np.logical_and(freqs >= low, freqs <= high)
         bp = simpson(psd[idx_band], dx=freq_res)

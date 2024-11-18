@@ -15,6 +15,10 @@ from power_density_statistics import (
 path: str = load_data(progbar_disable=True).data_collection_path
 print(path)
 
+path: str = "/Users/aia/Downloads/2024-08-25_19-49-12"
+# path: str = "/home1/10197/qxwang/BAKS_test/2024-08-25_19-49-12"
+print("file path:", path)
+
 working_directory = "results"
 
 dataset: DataManager = DataManager(data_collection_path=path)
@@ -34,10 +38,10 @@ pipeline1 = Pipeline(Periodogram_Analysis)
 pipeline2 = Pipeline(spectrum_per)
 pipeline3 = Pipeline(spectrum_mul)
 pipeline4 = Pipeline(Spec_Analysis)
-# pipeline1.run(working_directory=working_directory, verbose=True)
-# pipeline2.run(working_directory=working_directory, verbose=True)
+pipeline1.run(working_directory=working_directory, verbose=True)
+pipeline2.run(working_directory=working_directory, verbose=True)
 pipeline3.run(working_directory=working_directory, verbose=True)
-# pipeline4.run(working_directory=working_directory, verbose=True)
+pipeline4.run(working_directory=working_directory, verbose=True)
 # data >> Periodogram_Analysis
 # data >> Spectrum_Analysis
 # pipeline1 = Pipeline(Periodogram_Analysis)

@@ -38,7 +38,7 @@ class SpectrogramAnalysis(OperatorMixin):
         super().__init__()
 
     @cache_call
-    def __call__(self, signal: SignalType) -> dict[int, dict[int, dict[str, Any]]]:
+    def __call__(self, signal: SignalType) -> dict[int, dict[str, Any]]:
         """
         Perform spectrum analysis on the given signal.
 
@@ -52,28 +52,29 @@ class SpectrogramAnalysis(OperatorMixin):
         spec_dict
             spectrum dictionary
         """
-        spec_dict: dict[int, dict[int, dict[str, Any]]] = defaultdict(dict)
+        spec_dict: dict[int, dict[str, Any]] = defaultdict(dict)
 
         for chunk_index, signal_piece in enumerate(signal):
-            spec_dict[chunk_index] = self.computing_spectrum(signal_piece)
+            spec_dict = self.computing_spectrum(signal_piece, spec_dict)
 
         return spec_dict
 
-    def computing_spectrum(self, signal: Signal) -> dict[int, dict[str, Any]]:
-        spec_dict: dict[int, dict[str, Any]] = defaultdict(dict)
-
+    def computing_spectrum(
+        self, signal: Signal, spec_dict: dict[int, dict[str, Any]]
+    ) -> dict[int, dict[str, Any]]:
         nperseg = int(signal.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
-        for channel, channel_signal in enumerate(signal):
+        for channel_index, channel_signal in enumerate(signal):
             signal_no_bias = channel_signal - np.mean(channel_signal)
-            frequencies, times, Sxx = scipy.signal.spectrogram(
+            frequencies, times, sxx = scipy.signal.spectrogram(
                 signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap
             )
-            spec_dict[channel] = {
-                "frequencies": frequencies,
-                "times": times,
-                "Sxx": Sxx,
-            }
+            if channel_index not in spec_dict:
+                spec_dict[channel_index] = {"frequencies": [], "times": [], "Sxx": []}
+            spec_dict[channel_index]["frequencies"].append(frequencies)
+            spec_dict[channel_index]["times"].append(times)
+            spec_dict[channel_index]["Sxx"].append(sxx)
+
         return spec_dict
 
     def plot_spectrogram(self, output, input, show=False, save_path=None):
@@ -91,22 +92,21 @@ class SpectrogramAnalysis(OperatorMixin):
         """
         spec_dict = output
 
-        for chunk in spec_dict.keys():
-            for channel in spec_dict[chunk].keys():
+        for channel in spec_dict.keys():
+            for chunk in range(len(spec_dict[channel]["frequencies"])):
                 channel_folder = os.path.join(save_path, f"channel{channel:03d}")
                 os.makedirs(channel_folder, exist_ok=True)
 
-                spectrogram_data = spec_dict[chunk][channel]
-                frequencies = spectrogram_data["frequencies"]
-                times = spectrogram_data["times"]
-                Sxx = spectrogram_data["Sxx"]
-                Sxx = np.maximum(Sxx, 1e-2)
-                Sxx_log = 10 * np.log10(Sxx)
+                frequencies = spec_dict[channel]["frequencies"][chunk]
+                times = spec_dict[channel]["times"][chunk]
+                sxx = spec_dict[channel]["Sxx"][chunk]
+                sxx = np.maximum(sxx, 1e-2)
+                sxx_log = 10 * np.log10(sxx)
 
                 fig, ax = plt.subplots(2, 1, figsize=(14, 12))
 
                 cax1 = ax[0].pcolormesh(
-                    times, frequencies, Sxx_log, shading="gouraud", cmap="inferno"
+                    times, frequencies, sxx_log, shading="gouraud", cmap="inferno"
                 )
                 ax[0].set_title("Spectrogram")
                 ax[0].set_xlabel("Time (s)")
@@ -123,7 +123,7 @@ class SpectrogramAnalysis(OperatorMixin):
                     )
 
                 cax2 = ax[1].pcolormesh(
-                    times, frequencies, Sxx_log, shading="gouraud", cmap="inferno"
+                    times, frequencies, sxx_log, shading="gouraud", cmap="inferno"
                 )
                 ax[1].set_xlabel("Time (s)")
                 ax[1].set_ylabel("Frequency (Hz)")
