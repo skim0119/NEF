@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ 'main' ]
+    branches: [ 'main', 'test_ci' ]
   pull_request:
     branches: [ '**' ]
 
@@ -24,11 +24,14 @@ jobs:
           pip install black mypy pytest pytest-cov
           
       - uses: psf/black@stable
+        if: always()
         with:
           options: "--diff --check --config pyproject.toml --verbose"
           src: "./PeriodogramAnalysis"
       - name: Run mypy type check
+        if: always()
         run: mypy --config-file pyproject.toml PeriodogramAnalysis
       - name: Run pytest coverage
+        if: always()
         run: |
           pytest --cov=PeriodogramAnalysis --cov-fail-under=80
