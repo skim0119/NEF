@@ -153,6 +153,7 @@ class SpectrumAnalysisPeriodogram(SpectrumAnalysisBase):
     """
     A class that performs spectral analysis using the Periodogram method.
     """
+
     tag: str = "Periodogram PSD spectrum analysis"
 
     def compute_psd(
@@ -175,6 +176,7 @@ class SpectrumAnalysisMultitaper(SpectrumAnalysisBase):
     """
     A class that performs spectral analysis using the Multitaper method.
     """
+
     tag: str = "Multitaper PSD spectrum analysis"
 
     def compute_psd(
