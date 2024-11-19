@@ -73,6 +73,7 @@ exclude_lines = [
     "if __name__ == __main__:",
     "def __repr__",
     '''def plot_'.*\b':''',
+    "def plot_*",
     "if self.debug:",
     "if settings.DEBUG",
     "if TYPE_CHECKING:",
