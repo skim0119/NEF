@@ -23,10 +23,8 @@ class SpectrogramAnalysis(OperatorMixin):
     -----------
     frequency_limit : list
         Frequency range limit for analysis.
-    nperseg : int
-        Number of points per segment for spectrogram computation.
-    noverlap : int
-        Number of points to overlap between segments for spectrogram.
+    nperseg_ratio : float
+        Specifies the ratio of the number of points per segment (`nperseg`) to the sampling rate.
     """
 
     frequency_limit: tuple[float, float] = (0.5, 100)

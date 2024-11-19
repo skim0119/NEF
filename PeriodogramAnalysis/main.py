@@ -15,10 +15,6 @@ from power_density_statistics import (
 path: str = load_data(progbar_disable=True).data_collection_path
 print(path)
 
-path: str = "/Users/aia/Downloads/2024-08-25_19-49-12"
-# path: str = "/home1/10197/qxwang/BAKS_test/2024-08-25_19-49-12"
-print("file path:", path)
-
 working_directory = "results"
 
 dataset: DataManager = DataManager(data_collection_path=path)
