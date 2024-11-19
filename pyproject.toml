@@ -92,4 +92,6 @@ omit = [
     "*/.local/*",
 	  "setup.py",
     "*/__init__.py",
+    "tests/*",
+    "*/test*.py",
 ]
