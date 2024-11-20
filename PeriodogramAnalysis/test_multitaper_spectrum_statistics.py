@@ -23,9 +23,5 @@ def test_multitaper_psd():
                 verbose=0,
             )
 
-            difference_psd = psd_mne - psd
-            sum_diff_psd = np.sum(np.abs(difference_psd))
-            sum_pds = np.sum(np.abs(psd_mne))
+            np.testing.assert_allclose(psd, psd_mne, rtol=1e-3)
 
-            # Test the difference is smaller than 1%
-            assert sum_diff_psd / sum_pds < 1e-2
