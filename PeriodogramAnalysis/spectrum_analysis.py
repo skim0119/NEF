@@ -223,65 +223,12 @@ class PowerSpectrumAnalysis(OperatorMixin):
                 (chunk * len(self.band_list)) : ((chunk + 1) * len(self.band_list))
             ]
 
-            for band in self.band_list:
-                multitaper_power = self.computing_bandpower(
-                    psd_dict["freqs"][chunk], psd_dict["psd"][chunk], band
-                )
-                multitaper_power_rel = self.computing_bandpower(
-                    psd_dict["freqs"][chunk],
-                    psd_dict["psd"][chunk],
-                    band,
-                    relative=True,
-                )
-                self.logger.info(
-                    f"{band[0]}Hz to {band[1]}Hz: Power (absolute): {multitaper_power:.3f}\n"
-                )
-                self.logger.info(
-                    f"{band[0]}Hz to {band[1]}Hz: Power (relative): {multitaper_power_rel:.3f}\n"
-                )
-
             for band, abs_power, rel_power in zip(
                 self.band_list, absolute_powers, relative_powers
             ):
                 self.logger.info(
-                    f"Absolute {band} power of channel {channel} is: {abs_power:.3f} uV^2\n"
+                    f"{band}: Absolute power of channel {channel} is: {abs_power:.3f} uV^2\n"
                 )
                 self.logger.info(
-                    f"Relative {band} power of channel {channel} is: {rel_power:.3f} uV^2\n\n"
+                    f"{band}: Relative power of channel {channel} is: {rel_power:.3f} uV^2\n\n"
                 )
-
-    def computing_bandpower(
-        self,
-        freqs: np.ndarray,
-        psd: np.ndarray,
-        band: tuple[float, float],
-        relative: bool = False,
-    ) -> float:
-        """
-        Calculate the power within a specified frequency band from PSD.
-
-        Parameters
-        ----------
-        freqs : np.ndarray
-            A NumPy array containing the frequency values in Hz corresponding to the PSD data.
-        psd : np.ndarray
-            A NumPy array containing the power spectral density values.
-        band : tuple of float
-            A tuple representing the frequency band (low, high) in Hz for which to calculate the power.
-        relative : bool, optional
-            If True, returns the relative power within the specified band by dividing the band power
-            by the total power across all frequencies. Default is False.
-
-        Returns
-        -------
-        float
-            The calculated power within the specified frequency band.
-        """
-        low, high = band
-        freq_res = freqs[1] - freqs[0]
-        idx_band = np.logical_and(freqs >= low, freqs <= high)
-        bp = simpson(psd[idx_band], dx=freq_res)
-
-        if relative:
-            bp /= simpson(psd, dx=freq_res)
-        return bp

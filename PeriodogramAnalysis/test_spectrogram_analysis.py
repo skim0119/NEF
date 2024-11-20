@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import spectrogram
 
 from miv.core.datatype import Signal
 from spectrogram_analysis import SpectrogramAnalysis
@@ -6,28 +7,24 @@ from power_density_statistics import SpectrumAnalysisWelch
 
 
 def mock_signal_generator():
-    data1 = np.array(
-        [
-            np.sin(2 * np.pi * 5 * np.linspace(0, 1, 100)),  # 5 Hz
-            np.sin(2 * np.pi * 10 * np.linspace(0, 1, 100)),  # 10 Hz
-        ]
-    ).T
-    timestamps = np.linspace(0, 1, 100)
+    timestamps = np.linspace(0, 10, 1000, endpoint=False)
+    signal = (
+        np.sin(2 * np.pi * 5 * timestamps)
+        + np.sin(2 * np.pi * 10 * timestamps)
+        + np.sin(2 * np.pi * 15 * timestamps)
+        + np.sin(2 * np.pi * 20 * timestamps)
+    )
+
+    data1 = np.array([signal, signal]).T
     signal1 = Signal(data=data1, timestamps=timestamps, rate=100.0)
     yield signal1
 
-    data2 = np.array(
-        [
-            np.sin(2 * np.pi * 15 * np.linspace(0, 1, 200)),  # 15 Hz
-            np.sin(2 * np.pi * 20 * np.linspace(0, 1, 200)),  # 20 Hz
-        ]
-    ).T
-    timestamps = np.linspace(0, 1, 100)
+    data2 = np.array([signal, signal]).T
     signal2 = Signal(data=data2, timestamps=timestamps, rate=100.0)
     yield signal2
 
 
-def test_SpectrumAnalysis_call_and_computing_spectrum():
+def test_SpectrumAnalysis_call():
     """
     Test call func and computing_spectrum, check if spec_dict is as expected.
     """
@@ -47,3 +44,40 @@ def test_SpectrumAnalysis_call_and_computing_spectrum():
         assert len(spec_dict[channel]["frequencies"]) == 2
         assert len(spec_dict[channel]["times"]) == 2
         assert len(spec_dict[channel]["Sxx"]) == 2
+
+
+def test_computing_spectrum():
+    """
+    Test the computing_spectrum method.
+    """
+    power_analysis = SpectrogramAnalysis()
+    spec_dict = {}
+
+    signal_gen = mock_signal_generator()
+    signal = next(signal_gen)
+
+    result_spec_dict = power_analysis.computing_spectrum(signal, spec_dict)
+
+    for channel_index in result_spec_dict:
+        channel_data = result_spec_dict[channel_index]
+
+        for i in range(len(channel_data["frequencies"])):
+            signal_no_bias = signal.data[:, channel_index] - np.mean(
+                signal.data[:, channel_index]
+            )
+            freqs_expected, times_expected, sxx_expected = spectrogram(
+                signal_no_bias,
+                fs=signal.rate,
+                nperseg=int(signal.rate * power_analysis.nperseg_ratio),
+                noverlap=int((int(signal.rate * power_analysis.nperseg_ratio)) / 2),
+            )
+
+            np.testing.assert_allclose(
+                channel_data["frequencies"][i], freqs_expected, rtol=1e-5
+            )
+            np.testing.assert_allclose(
+                channel_data["times"][i], times_expected, rtol=1e-5
+            )
+            np.testing.assert_allclose(channel_data["Sxx"][i], sxx_expected, rtol=1e-5)
+
+    print("All tests passed successfully.")

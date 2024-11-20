@@ -3,9 +3,8 @@ from scipy.fft import rfft, rfftfreq
 from scipy.signal.windows import dpss
 from scipy.integrate import trapezoid
 
-def multitaper_psd(
-    x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, low_bias=True
-):
+
+def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, low_bias=True):
     """
     Compute multitaper power spectral density (PSD) of a given signal.
     This code is inspired from MNE: https://mne.tools/stable/index.html
@@ -67,6 +66,7 @@ def multitaper_psd(
     psd /= sfreq
     psd = psd.reshape(dshape + (n_freqs,))
     return psd, freqs
+
 
 def _mt_spectra(x, dpss, sfreq, n_fft=None, remove_dc=True):
     """
@@ -149,6 +149,7 @@ def _psd_from_mt_adaptive(x_mt, eigvals, freq_mask, max_iter=250, return_weights
         return psd, weights
     else:
         return psd
+
 
 def _psd_from_mt(x_mt, weights):
     """

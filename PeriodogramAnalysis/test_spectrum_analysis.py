@@ -1,5 +1,6 @@
 import numpy as np
 from spectrum_analysis import PowerSpectrumAnalysis
+from scipy.integrate import simpson
 
 
 def mock_psd_list():
@@ -63,7 +64,7 @@ def mock_psd_list():
     return psd_dict
 
 
-def test_power_spectrum_analysis_call_and_power_computation():
+def test_power_spectrum_analysis_call():
     """
     Test PowerSpectrumAnalysis class to ensure it computes the power_dict correctly
     based on the provided psd_dict, and returns the expected values.
@@ -91,6 +92,43 @@ def test_power_spectrum_analysis_call_and_power_computation():
             assert rel_power <= 1
 
 
+def test_computing_absolute_and_relative_power():
+    """
+    Test the computing_absolute_and_relative_power method.
+    """
+
+    power_analysis = PowerSpectrumAnalysis(
+        band_list=((1, 5), (5, 15), (15, 35), (35, 50))
+    )
+
+    psd_dict = mock_psd_list()
+    power_dict = {
+        "psd_idx": [],
+        "power_list": [],
+        "rel_power_list": [],
+    }
+
+    result_power_dict = power_analysis.computing_absolute_and_relative_power(
+        psd_dict[0], power_dict
+    )
+
+    freqs = psd_dict[0]["freqs"][0]
+    psd = psd_dict[0]["psd"][0]
+    freq_res = freqs[1] - freqs[0]
+    total_power = simpson(psd, dx=freq_res)
+
+    for i, band in enumerate(power_analysis.band_list):
+        psd_idx = np.logical_and(freqs >= band[0], freqs <= band[1])
+        manual_power = simpson(psd[psd_idx], dx=freq_res)
+        computed_power = result_power_dict["power_list"][i]
+        computed_rel_power = result_power_dict["rel_power_list"][i]
+
+        assert np.isclose(manual_power, computed_power, rtol=1e-2)
+
+        manual_rel_power = manual_power / total_power
+        assert np.isclose(manual_rel_power, computed_rel_power, rtol=1e-2)
+
+
 def test_computing_ratio_and_bandpower(mocker):
     """
     Test computing_ratio_and_bandpower, test how many logger are called.
@@ -106,37 +144,4 @@ def test_computing_ratio_and_bandpower(mocker):
     )
 
     # Test how many times logger is called
-    assert logger_info_spy.call_count == 21 * 2
-
-
-def test_computing_bandpower():
-    """
-    Test test_computing_bandpower, test how many logger are called.
-    """
-    analysis = PowerSpectrumAnalysis()
-    psd_dict = mock_psd_list()
-    psd_dict, power_dict = analysis(psd_dict)
-    band_list: tuple = ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100))
-
-    for channel, channel_data in psd_dict.items():
-        for chunk in range(len(psd_dict[channel]["freqs"])):
-            for band in band_list:
-                # Check common band power computation
-                bandpower = analysis.computing_bandpower(
-                    psd_dict[channel]["freqs"][chunk],
-                    psd_dict[channel]["psd"][chunk],
-                    band,
-                )
-                assert isinstance(bandpower, float)
-                assert bandpower >= 0
-                # Test relative power computation
-                relative_bandpower = analysis.computing_bandpower(
-                    psd_dict[channel]["freqs"][chunk],
-                    psd_dict[channel]["psd"][chunk],
-                    band,
-                    relative=True,
-                )
-                assert isinstance(relative_bandpower, float)
-                assert relative_bandpower >= 0
-                assert relative_bandpower <= 1
-                assert bandpower != relative_bandpower
+    assert logger_info_spy.call_count == 11 * 2
