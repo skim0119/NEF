@@ -5,12 +5,11 @@ from miv.core.operator import Operator, DataLoader
 from miv.io.openephys import Data, DataManager
 from multitaper_spectrum_statistics import multitaper_psd
 
-path: str = load_data(progbar_disable=True).data_collection_path
-dataset: DataManager = DataManager(data_collection_path=path)
-data: DataLoader = dataset[0]
-
-
 def test_multitaper_psd():
+    path: str = load_data(progbar_disable=True).data_collection_path
+    dataset: DataManager = DataManager(data_collection_path=path)
+    data: DataLoader = dataset[0]
+
     for signal in data.load():
 
         for channel_index in range(5):
