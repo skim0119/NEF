@@ -69,9 +69,7 @@ def test_SpectrumAnalysisWelch(tmp_path):
 
                 idx = np.argmin(np.abs(freqs - exp_freq))
                 # Test the peaks of psd is as expected
-                assert freqs[idx] == exp_freq or np.isclose(
-                    freqs[idx], exp_freq, atol=0.1
-                )
+                assert np.isclose(freqs[idx], exp_freq)
             # Test the psd around peaks comprises more than 90% of total psd
             assert range_psd_sum / total_psd_sum >= 0.9
 
@@ -98,9 +96,7 @@ def test_SpectrumAnalysisPeriodogram(tmp_path):
                 )
 
                 idx = np.argmin(np.abs(freqs - exp_freq))
-                assert freqs[idx] == exp_freq or np.isclose(
-                    freqs[idx], exp_freq, atol=0.1
-                )
+                assert np.isclose(freqs[idx], exp_freq)
 
             assert range_psd_sum / total_psd_sum >= 0.9
 
@@ -127,8 +123,6 @@ def test_SpectrumAnalysisMultitaper(tmp_path):
                 )
 
                 idx = np.argmin(np.abs(freqs - exp_freq))
-                assert freqs[idx] == exp_freq or np.isclose(
-                    freqs[idx], exp_freq, atol=0.1
-                )
+                assert np.isclose(freqs[idx], exp_freq)
 
             assert range_psd_sum / total_psd_sum >= 0.9

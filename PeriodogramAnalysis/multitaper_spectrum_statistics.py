@@ -2,6 +2,7 @@ import numpy as np
 from scipy.fft import rfft, rfftfreq
 from scipy.signal.windows import dpss
 from scipy.integrate import trapezoid
+from scipy.signal import get_window
 
 
 def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, low_bias=True):
@@ -21,8 +22,6 @@ def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, low_bias=Tru
         Maximum frequency to consider in the PSD.
     bandwidth : float, optional
         Bandwidth of the DPSS tapers. Default is None.
-    adaptive : bool
-        If True, use adaptive weighting to combine taper PSDs.
     low_bias : bool
         If True, only use tapers with eigenvalues greater than 0.9.
 
@@ -35,9 +34,9 @@ def multitaper_psd(x, sfreq, fmin=0.0, fmax=np.inf, bandwidth=None, low_bias=Tru
     dshape = x.shape[:-1]
     x = x.reshape(-1, n_times)
 
-    half_nbw = bandwidth * n_times / (2.0 * sfreq) if bandwidth else 4.0
-    n_tapers_max = int(2 * half_nbw)
-    dpss_windows, eigvals = dpss(n_times, half_nbw, n_tapers_max, return_ratios=True)
+    dpss_windows, eigvals, adaptive = _compute_mt_params(
+        n_times, sfreq, bandwidth, low_bias
+    )
 
     if low_bias:
         idx = eigvals > 0.9
@@ -160,3 +159,50 @@ def _psd_from_mt(x_mt, weights):
     psd = psd.real.sum(axis=-2)
     psd *= 2 / (weights * weights.conj()).real.sum(axis=-2)
     return psd
+
+
+def _compute_mt_params(
+    n_times, sfreq, bandwidth, low_bias, adaptive=True, verbose=None
+):
+    """
+    This code is copied from MNE: https://mne.tools/stable/index.html
+    """
+    # Compute standardized half-bandwidth
+    if isinstance(bandwidth, str):
+        window_fun = get_window(bandwidth, n_times)[np.newaxis]
+        return window_fun, np.ones(1), False
+
+    if bandwidth is not None:
+        half_nbw = float(bandwidth) * n_times / (2.0 * sfreq)
+    else:
+        half_nbw = 4.0
+    if half_nbw < 0.5:
+        raise ValueError(
+            f"bandwidth value {bandwidth} yields a normalized half-bandwidth of "
+            f"{half_nbw} < 0.5, use a value of at least {sfreq / n_times}"
+        )
+
+    # Compute DPSS windows
+    n_tapers_max = int(2 * half_nbw)
+    window_fun, eigvals = dpss_windows(
+        n_times, half_nbw, n_tapers_max, sym=False, low_bias=low_bias
+    )
+
+    return window_fun, eigvals, adaptive
+
+
+def dpss_windows(N, half_nbw, Kmax, *, sym=True, norm=None, low_bias=True):
+    """
+    This code is copied from MNE: https://mne.tools/stable/index.html
+    """
+    dpss_window, eigvals = dpss(
+        N, half_nbw, Kmax, sym=sym, norm=norm, return_ratios=True
+    )
+    if low_bias:
+        idx = eigvals > 0.9
+        if not idx.any():
+            idx = [np.argmax(eigvals)]
+        dpss_window, eigvals = dpss_window[idx], eigvals[idx]
+    assert len(dpss_window) > 0  # should never happen
+    assert dpss_window.shape[1] == N  # old nitime bug
+    return dpss_window, eigvals

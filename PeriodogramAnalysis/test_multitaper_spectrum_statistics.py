@@ -23,4 +23,4 @@ def test_multitaper_psd():
                 verbose=0,
             )
 
-            np.testing.assert_allclose(psd, psd_mne, rtol=1e-3)
+            np.testing.assert_allclose(psd, psd_mne)

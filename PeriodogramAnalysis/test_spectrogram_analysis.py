@@ -6,7 +6,7 @@ from spectrogram_analysis import SpectrogramAnalysis
 from power_density_statistics import SpectrumAnalysisWelch
 
 
-def mock_signal_generator():
+def signal_input():
     timestamps = np.linspace(0, 10, 1000, endpoint=False)
     signal = (
         np.sin(2 * np.pi * 5 * timestamps)
@@ -29,7 +29,7 @@ def test_SpectrumAnalysis_call():
     Test call func and computing_spectrum, check if spec_dict is as expected.
     """
     spectrum_analysis = SpectrogramAnalysis()
-    spec_dict = spectrum_analysis(mock_signal_generator())
+    spec_dict = spectrum_analysis(signal_input())
 
     # test structure of spec_dict
     assert isinstance(spec_dict, dict)
@@ -53,7 +53,7 @@ def test_computing_spectrum():
     power_analysis = SpectrogramAnalysis()
     spec_dict = {}
 
-    signal_gen = mock_signal_generator()
+    signal_gen = signal_input()
     signal = next(signal_gen)
 
     result_spec_dict = power_analysis.computing_spectrum(signal, spec_dict)
@@ -72,12 +72,8 @@ def test_computing_spectrum():
                 noverlap=int((int(signal.rate * power_analysis.nperseg_ratio)) / 2),
             )
 
-            np.testing.assert_allclose(
-                channel_data["frequencies"][i], freqs_expected, rtol=1e-5
-            )
-            np.testing.assert_allclose(
-                channel_data["times"][i], times_expected, rtol=1e-5
-            )
-            np.testing.assert_allclose(channel_data["Sxx"][i], sxx_expected, rtol=1e-5)
+            np.testing.assert_allclose(channel_data["frequencies"][i], freqs_expected)
+            np.testing.assert_allclose(channel_data["times"][i], times_expected)
+            np.testing.assert_allclose(channel_data["Sxx"][i], sxx_expected)
 
     print("All tests passed successfully.")

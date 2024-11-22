@@ -3,7 +3,7 @@ from spectrum_analysis import PowerSpectrumAnalysis
 from scipy.integrate import simpson
 
 
-def mock_psd_list():
+def psd_input():
     psd_dict = {
         0: {  # channel index
             "freqs": [
@@ -69,7 +69,7 @@ def test_power_spectrum_analysis_call():
     Test PowerSpectrumAnalysis class to ensure it computes the power_dict correctly
     based on the provided psd_dict, and returns the expected values.
     """
-    psd_dict = mock_psd_list()
+    psd_dict = psd_input()
     analysis = PowerSpectrumAnalysis()
 
     psd_dict, power_dict = analysis(psd_dict)
@@ -101,7 +101,7 @@ def test_computing_absolute_and_relative_power():
         band_list=((1, 5), (5, 15), (15, 35), (35, 50))
     )
 
-    psd_dict = mock_psd_list()
+    psd_dict = psd_input()
     power_dict = {
         "psd_idx": [],
         "power_list": [],
@@ -123,10 +123,10 @@ def test_computing_absolute_and_relative_power():
         computed_power = result_power_dict["power_list"][i]
         computed_rel_power = result_power_dict["rel_power_list"][i]
 
-        assert np.isclose(manual_power, computed_power, rtol=1e-2)
+        assert np.isclose(manual_power, computed_power)
 
         manual_rel_power = manual_power / total_power
-        assert np.isclose(manual_rel_power, computed_rel_power, rtol=1e-2)
+        assert np.isclose(manual_rel_power, computed_rel_power)
 
 
 def test_computing_ratio_and_bandpower(mocker):
@@ -135,7 +135,7 @@ def test_computing_ratio_and_bandpower(mocker):
     """
     channel_idx = 0
     analysis = PowerSpectrumAnalysis()
-    psd_dict = mock_psd_list()
+    psd_dict = psd_input()
     psd_dict, power_dict = analysis(psd_dict)
 
     logger_info_spy = mocker.spy(analysis.logger, "info")
