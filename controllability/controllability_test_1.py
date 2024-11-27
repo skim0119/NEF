@@ -150,6 +150,7 @@ def compute_controllability(graph_type, num_nodes, num_iter):
                     ]
                 )
                 rank = np.linalg.matrix_rank(controllability_matrix)
+                print(rank)
                 if rank < step:
                     max_step = step
                     break
