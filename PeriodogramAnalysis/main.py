@@ -3,6 +3,7 @@ from miv.core.pipeline import Pipeline
 from spectrum_analysis import PowerSpectrumAnalysis
 from spectrogram_analysis import SpectrogramAnalysis
 from miv.core.operator import DataLoader
+from miv.core.operator import Operator
 from miv.datasets.openephys_sample import load_data
 from power_density_statistics import (
     SpectrumAnalysisPeriodogram,
@@ -19,10 +20,10 @@ working_directory = "results"
 dataset: DataManager = DataManager(data_collection_path=path)
 data: DataLoader = dataset[0]
 
-spectrum_welch = SpectrumAnalysisWelch()
-spectrum_per = SpectrumAnalysisPeriodogram()
-Periodogram_Analysis = PowerSpectrumAnalysis()
-Spec_Analysis = SpectrogramAnalysis()
+spectrum_welch: Operator = SpectrumAnalysisWelch()
+spectrum_per: Operator = SpectrumAnalysisPeriodogram()
+Periodogram_Analysis: Operator = PowerSpectrumAnalysis()
+Spec_Analysis: Operator = SpectrogramAnalysis()
 
 data >> spectrum_welch >> Periodogram_Analysis
 data >> spectrum_per

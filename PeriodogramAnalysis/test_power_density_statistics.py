@@ -3,7 +3,6 @@ import numpy as np
 from miv.core.datatype import Signal
 from power_density_statistics import (
     SpectrumAnalysisPeriodogram,
-    SpectrumAnalysisMultitaper,
     SpectrumAnalysisWelch,
 )
 

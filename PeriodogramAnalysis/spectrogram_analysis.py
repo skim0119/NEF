@@ -60,10 +60,13 @@ class SpectrogramAnalysis(OperatorMixin):
     def computing_spectrum(
         self, signal: Signal, spec_dict: dict[int, dict[str, Any]]
     ) -> dict[int, dict[str, Any]]:
+
         nperseg = int(signal.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
-        for channel_index, channel_signal in enumerate(signal):
-            signal_no_bias = channel_signal - np.mean(channel_signal)
+        channel_signal: np.ndarray
+
+        for channel_index in range(signal.number_of_channels):
+            signal_no_bias = signal[channel_index] - np.mean(signal[channel_index])
             frequencies, times, sxx = scipy.signal.spectrogram(
                 signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap
             )

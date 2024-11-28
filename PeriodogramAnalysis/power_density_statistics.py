@@ -133,10 +133,12 @@ class SpectrumAnalysisWelch(SpectrumAnalysisBase):
     def compute_psd(
         self, signal: Signal, psd_welch_dict: dict[int, dict[str, Any]]
     ) -> dict[int, dict[str, Any]]:
-        win = self.window_length_for_welch * signal.rate
 
-        for channel_index, channel_signal in enumerate(signal):
-            signal_no_bias = channel_signal - np.mean(channel_signal)
+        win = self.window_length_for_welch * signal.rate
+        channel_signal: np.ndarray
+
+        for channel_index in range(signal.number_of_channels):
+            signal_no_bias = signal[channel_index] - np.mean(signal[channel_index])
             freqs, psd = scipy.signal.welch(
                 signal_no_bias, fs=signal.rate, nperseg=win, nfft=4 * win
             )
@@ -158,8 +160,11 @@ class SpectrumAnalysisPeriodogram(SpectrumAnalysisBase):
     def compute_psd(
         self, signal: Signal, psd_periodogram_dict: dict[int, dict[str, Any]]
     ) -> dict[int, dict[str, Any]]:
-        for channel_index, channel_signal in enumerate(signal):
-            signal_no_bias = channel_signal - np.mean(channel_signal)
+
+        channel_signal: np.ndarray
+
+        for channel_index in range(signal.number_of_channels):
+            signal_no_bias = signal[channel_index] - np.mean(signal[channel_index])
             freqs, psd = scipy.signal.periodogram(signal_no_bias, signal.rate)
 
             if channel_index not in psd_periodogram_dict:
