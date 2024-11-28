@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 import os
 from dataclasses import dataclass
@@ -34,13 +34,13 @@ class PowerSpectrumAnalysis(OperatorMixin):
     )
     tag: str = "PowerSpectrum Analysis"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__init__()
 
     @cache_call
     def __call__(
         self, psd_dict: dict[int, dict[str, Any]]
-    ) -> tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]]:
+    ) -> tuple:
         """
         Perform the periodogram analysis on the given signal.
 
@@ -110,11 +110,11 @@ class PowerSpectrumAnalysis(OperatorMixin):
 
     def plot_periodogram(
         self,
-        output,
-        input,
+        output: tuple,
+        input: None,
         show: bool = False,
         save_path: Optional[pathlib.Path] = None,
-    ):
+    ) -> None:
         """
         Plot periodogram for the given signal, w.r.t. all channels in all chunks.
 
@@ -201,8 +201,8 @@ class PowerSpectrumAnalysis(OperatorMixin):
                 plt.close()
 
     def computing_ratio_and_bandpower(
-        self, psd_dict: dict[str, Any], power_dict: dict[str, Any], channel
-    ):
+        self, psd_dict: dict[str, Any], power_dict: dict[str, Any], channel: int
+    ) -> None:
         """
         Compute power ratios and band powers for specific bands.
 
