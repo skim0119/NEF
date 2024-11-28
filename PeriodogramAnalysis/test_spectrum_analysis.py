@@ -1,5 +1,6 @@
 from typing import Any, Optional, Tuple
 
+from pytest_mock import MockerFixture
 import numpy as np
 from spectrum_analysis import PowerSpectrumAnalysis
 from scipy.integrate import simpson
@@ -104,7 +105,7 @@ def test_computing_absolute_and_relative_power() -> None:
     )
 
     psd_dict = psd_input()
-    power_dict = {
+    power_dict: dict[str, Any] = {
         "psd_idx": [],
         "power_list": [],
         "rel_power_list": [],
@@ -131,7 +132,7 @@ def test_computing_absolute_and_relative_power() -> None:
         assert np.isclose(manual_rel_power, computed_rel_power)
 
 
-def test_computing_ratio_and_bandpower(mocker) -> None:
+def test_computing_ratio_and_bandpower(mocker: MockerFixture) -> None:
     """
     Test computing_ratio_and_bandpower, test how many logger are called.
     """

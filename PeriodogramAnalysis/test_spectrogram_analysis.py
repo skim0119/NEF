@@ -1,3 +1,5 @@
+from typing import Generator, Any
+
 import numpy as np
 from scipy.signal import spectrogram
 
@@ -5,7 +7,7 @@ from miv.core.datatype import Signal
 from spectrogram_analysis import SpectrogramAnalysis
 
 
-def signal_input() -> Signal:
+def signal_input() -> Generator:
     timestamps = np.linspace(0, 10, 1000, endpoint=False)
     signal = (
         np.sin(2 * np.pi * 5 * timestamps)
@@ -15,11 +17,11 @@ def signal_input() -> Signal:
     )
 
     data1 = np.array([signal, signal]).T
-    signal1 = Signal(data=data1, timestamps=timestamps, rate=100.0)
+    signal1 = Signal(data=data1, timestamps=timestamps, rate=100)
     yield signal1
 
     data2 = np.array([signal, signal]).T
-    signal2 = Signal(data=data2, timestamps=timestamps, rate=100.0)
+    signal2 = Signal(data=data2, timestamps=timestamps, rate=100)
     yield signal2
 
 
@@ -50,7 +52,7 @@ def test_computing_spectrum() -> None:
     Test the computing_spectrum method.
     """
     power_analysis = SpectrogramAnalysis()
-    spec_dict = {}
+    spec_dict: dict[str, Any] = {}
 
     signal_gen = signal_input()
     signal = next(signal_gen)

@@ -1,3 +1,6 @@
+from typing import Generator, Any
+
+from pytest_mock import MockerFixture
 import numpy as np
 import pytest
 from collections import defaultdict
@@ -9,7 +12,7 @@ from power_density_statistics import (
 )
 
 
-def mock_signal_generator() -> Signal:
+def mock_signal_generator() -> Generator:
     timestamps = np.linspace(0, 10, 1000, endpoint=False)
     signal = (
         np.sin(2 * np.pi * 5 * timestamps)
@@ -19,18 +22,18 @@ def mock_signal_generator() -> Signal:
     )
 
     data1 = np.array([signal, signal]).T
-    signal1 = Signal(data=data1, timestamps=timestamps, rate=100.0)
+    signal1 = Signal(data=data1, timestamps=timestamps, rate=100)
     yield signal1
 
     data2 = np.array([signal, signal]).T
-    signal2 = Signal(data=data2, timestamps=timestamps, rate=100.0)
+    signal2 = Signal(data=data2, timestamps=timestamps, rate=100)
     yield signal2
 
 
 def test_SpectrumAnalysisBase_compute_psd_not_implemented() -> None:
     analyzer = SpectrumAnalysisBase()
     signal = next(mock_signal_generator())
-    psd_dict = {}
+    psd_dict: dict[str, Any] = {}
     with pytest.raises(NotImplementedError) as exc_info:
         analyzer.compute_psd(signal, psd_dict)
     assert str(exc_info.value) == (
@@ -40,7 +43,7 @@ def test_SpectrumAnalysisBase_compute_psd_not_implemented() -> None:
     )
 
 
-def test_SpectrumAnalysisBase_call(mocker) -> None:
+def test_SpectrumAnalysisBase_call(mocker: MockerFixture) -> None:
     # Test SpectrumAnalysisBase default
     analyzer = SpectrumAnalysisBase(
         window_length_for_welch=8, band_display=(10, 200), tag="Custom Analysis"
@@ -77,7 +80,7 @@ def test_SpectrumAnalysisBase_call(mocker) -> None:
             assert "psd" in channel_data
 
 
-def test_SpectrumAnalysisWelch(tmp_path) -> None:
+def test_SpectrumAnalysisWelch() -> None:
     analysis = SpectrumAnalysisWelch()
     psd_dict = analysis(mock_signal_generator())
 
@@ -102,7 +105,7 @@ def test_SpectrumAnalysisWelch(tmp_path) -> None:
             assert range_psd_sum / total_psd_sum >= 0.9
 
 
-def test_SpectrumAnalysisPeriodogram(tmp_path) -> None:
+def test_SpectrumAnalysisPeriodogram() -> None:
     analysis = SpectrumAnalysisPeriodogram()
     psd_dict = analysis(mock_signal_generator())
 
@@ -128,7 +131,7 @@ def test_SpectrumAnalysisPeriodogram(tmp_path) -> None:
 
 def test_SpectrumAnalysisWelch_compute_psd() -> None:
     analyzer = SpectrumAnalysisWelch()
-    psd_dict_mock = {
+    psd_dict_mock: dict[int, dict[str, Any]] = {
         0: {  # Channel index 0
             "freqs": [0, 4, 9, 14, 19, 24],
             "psd": [0, 0.4, 0.5, 0.4, 0.2, 0.1],
@@ -159,7 +162,7 @@ def test_SpectrumAnalysisWelch_compute_psd() -> None:
             result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6]
         )
 
-    psd_dict = {}
+    psd_dict: dict[str, Any] = {}
     result = analyzer.compute_psd(signal, psd_dict)
 
     assert isinstance(result, dict)
@@ -168,7 +171,7 @@ def test_SpectrumAnalysisWelch_compute_psd() -> None:
 
 def test_SpectrumAnalysisPeriodogram_compute_psd() -> None:
     analyzer = SpectrumAnalysisPeriodogram()
-    psd_dict_mock = {
+    psd_dict_mock: dict[int, dict[str, Any]] = {
         0: {  # Channel index 0
             "freqs": [0, 4, 9, 14, 19, 24],
             "psd": [0, 0.4, 0.5, 0.4, 0.2, 0.1],
@@ -199,7 +202,7 @@ def test_SpectrumAnalysisPeriodogram_compute_psd() -> None:
             result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6]
         )
 
-    psd_dict = {}
+    psd_dict: dict[str, Any] = {}
     result = analyzer.compute_psd(signal, psd_dict)
 
     assert isinstance(result, dict)

@@ -1,5 +1,6 @@
-from typing import Any
+from typing import Any, Optional
 
+import pathlib
 import os
 from dataclasses import dataclass
 
@@ -78,7 +79,7 @@ class SpectrogramAnalysis(OperatorMixin):
 
         return spec_dict
 
-    def plot_spectrogram(self, output, input, show=False, save_path=None) -> None:
+    def plot_spectrogram(self, output: dict, input: None, show: bool=False, save_path: Optional[pathlib.Path]=None) -> None:
         """
         Plot spectrogram of the signal for given chunks and channels.
 
