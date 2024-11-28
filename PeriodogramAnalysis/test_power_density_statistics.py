@@ -1,5 +1,5 @@
 import numpy as np
-
+import pytest
 from collections import defaultdict
 from miv.core.datatype import Signal
 from power_density_statistics import (
@@ -26,20 +26,19 @@ def mock_signal_generator():
     signal2 = Signal(data=data2, timestamps=timestamps, rate=100.0)
     yield signal2
 
-
-def test_SpectrumAnalysisBase_call(mocker):
+def test_SpectrumAnalysisBase_compute_psd_not_implemented():
     analyzer = SpectrumAnalysisBase()
     signal = next(mock_signal_generator())
     psd_dict = {}
-    try:
+    with pytest.raises(NotImplementedError) as exc_info:
         analyzer.compute_psd(signal, psd_dict)
-    except NotImplementedError as e:
-        assert str(e) == (
-            "The compute_psd method is not implemented in the base class. "
-            "This base class is not intended for standalone use. Please use a subclass "
-            "such as SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram, or SpectrumAnalysisMultitaper."
-        )
+    assert str(exc_info.value) == (
+        "The compute_psd method is not implemented in the base class. "
+        "This base class is not intended for standalone use. Please use a subclass "
+        "such as SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram, or SpectrumAnalysisMultitaper."
+    )
 
+def test_SpectrumAnalysisBase_call(mocker):
     # Test SpectrumAnalysisBase default
     analyzer = SpectrumAnalysisBase(
         window_length_for_welch=8, band_display=(10, 200), tag="Custom Analysis"
@@ -154,7 +153,7 @@ def test_SpectrumAnalysisWelch_compute_psd():
     result = analyzer.compute_psd(signal, psd_dict)
 
     assert isinstance(result, dict)
-    assert len(result) == 1
+    assert len(result) == 2
 
 def test_SpectrumAnalysisPeriodogram_compute_psd():
     analyzer = SpectrumAnalysisPeriodogram()

@@ -3,7 +3,6 @@ from scipy.signal import spectrogram
 
 from miv.core.datatype import Signal
 from spectrogram_analysis import SpectrogramAnalysis
-from power_density_statistics import SpectrumAnalysisWelch
 
 
 def signal_input():
