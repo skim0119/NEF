@@ -28,6 +28,18 @@ def mock_signal_generator():
 
 
 def test_SpectrumAnalysisBase_call(mocker):
+    analyzer = SpectrumAnalysisBase()
+    signal = next(mock_signal_generator())
+    psd_dict = {}
+    try:
+        analyzer.compute_psd(signal, psd_dict)
+    except NotImplementedError as e:
+        assert str(e) == (
+            "The compute_psd method is not implemented in the base class. "
+            "This base class is not intended for standalone use. Please use a subclass "
+            "such as SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram, or SpectrumAnalysisMultitaper."
+        )
+
     # Test SpectrumAnalysisBase default
     analyzer = SpectrumAnalysisBase(
         window_length_for_welch=8, band_display=(10, 200), tag="Custom Analysis"
@@ -137,6 +149,12 @@ def test_SpectrumAnalysisWelch_compute_psd():
         # Validate numerical values
         np.testing.assert_array_equal(result[channel_index]["freqs"][:6], psd_dict_mock[channel_index]["freqs"][:6])
         np.testing.assert_array_equal(result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6])
+
+    psd_dict = {}
+    result = analyzer.compute_psd(signal, psd_dict)
+
+    assert isinstance(result, dict)
+    assert len(result) == 1
 
 def test_SpectrumAnalysisPeriodogram_compute_psd():
     analyzer = SpectrumAnalysisPeriodogram()
