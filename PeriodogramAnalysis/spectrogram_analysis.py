@@ -32,7 +32,7 @@ class SpectrogramAnalysis(OperatorMixin):
     nperseg_ratio: float = 0.25
     tag = "Spectrogram Analysis"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__init__()
 
     @cache_call
@@ -78,7 +78,7 @@ class SpectrogramAnalysis(OperatorMixin):
 
         return spec_dict
 
-    def plot_spectrogram(self, output, input, show=False, save_path=None):
+    def plot_spectrogram(self, output, input, show=False, save_path=None) -> None:
         """
         Plot spectrogram of the signal for given chunks and channels.
 

@@ -5,7 +5,7 @@ from miv.core.datatype import Signal
 from spectrogram_analysis import SpectrogramAnalysis
 
 
-def signal_input():
+def signal_input() -> Signal:
     timestamps = np.linspace(0, 10, 1000, endpoint=False)
     signal = (
         np.sin(2 * np.pi * 5 * timestamps)
@@ -23,7 +23,7 @@ def signal_input():
     yield signal2
 
 
-def test_SpectrumAnalysis_call():
+def test_SpectrumAnalysis_call() -> None:
     """
     Test call func and computing_spectrum, check if spec_dict is as expected.
     """
@@ -45,7 +45,7 @@ def test_SpectrumAnalysis_call():
         assert len(spec_dict[channel]["Sxx"]) == 2
 
 
-def test_computing_spectrum():
+def test_computing_spectrum() -> None:
     """
     Test the computing_spectrum method.
     """

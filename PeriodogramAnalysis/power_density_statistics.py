@@ -34,7 +34,7 @@ class SpectrumAnalysisBase(OperatorMixin):
     band_display: tuple[float, float] = (0, 100)
     tag: str = "Base PSD spectrum analysis"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__init__()
 
     @cache_call
@@ -76,11 +76,11 @@ class SpectrumAnalysisBase(OperatorMixin):
 
     def plot_spectrum(
         self,
-        output,
-        input,
+        output: dict,
+        input: None,
         show: bool = False,
         save_path: Optional[pathlib.Path] = None,
-    ):
+    ) -> None:
         """
         Plots the PSD of the given signal output and optionally saves the plot to a specified path.
 

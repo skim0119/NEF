@@ -1,9 +1,11 @@
+from typing import Any, Optional, Tuple
+
 import numpy as np
 from spectrum_analysis import PowerSpectrumAnalysis
 from scipy.integrate import simpson
 
 
-def psd_input():
+def psd_input() -> dict[int, dict[str, Any]]:
     psd_dict = {
         0: {  # channel index
             "freqs": [
@@ -64,7 +66,7 @@ def psd_input():
     return psd_dict
 
 
-def test_power_spectrum_analysis_call():
+def test_power_spectrum_analysis_call() -> None:
     """
     Test PowerSpectrumAnalysis class to ensure it computes the power_dict correctly
     based on the provided psd_dict, and returns the expected values.
@@ -92,7 +94,7 @@ def test_power_spectrum_analysis_call():
             assert rel_power <= 1
 
 
-def test_computing_absolute_and_relative_power():
+def test_computing_absolute_and_relative_power() -> None:
     """
     Test the computing_absolute_and_relative_power method.
     """
@@ -129,7 +131,7 @@ def test_computing_absolute_and_relative_power():
         assert np.isclose(manual_rel_power, computed_rel_power)
 
 
-def test_computing_ratio_and_bandpower(mocker):
+def test_computing_ratio_and_bandpower(mocker) -> None:
     """
     Test computing_ratio_and_bandpower, test how many logger are called.
     """

@@ -40,7 +40,7 @@ class PowerSpectrumAnalysis(OperatorMixin):
     @cache_call
     def __call__(
         self, psd_dict: dict[int, dict[str, Any]]
-    ) -> tuple:
+    ) -> Tuple[dict[int, dict[str, Any]], dict[int, dict[str, Any]]]:
         """
         Perform the periodogram analysis on the given signal.
 

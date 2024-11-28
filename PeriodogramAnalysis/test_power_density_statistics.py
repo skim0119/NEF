@@ -9,7 +9,7 @@ from power_density_statistics import (
 )
 
 
-def mock_signal_generator():
+def mock_signal_generator() -> Signal:
     timestamps = np.linspace(0, 10, 1000, endpoint=False)
     signal = (
         np.sin(2 * np.pi * 5 * timestamps)
@@ -27,7 +27,7 @@ def mock_signal_generator():
     yield signal2
 
 
-def test_SpectrumAnalysisBase_compute_psd_not_implemented():
+def test_SpectrumAnalysisBase_compute_psd_not_implemented() -> None:
     analyzer = SpectrumAnalysisBase()
     signal = next(mock_signal_generator())
     psd_dict = {}
@@ -40,7 +40,7 @@ def test_SpectrumAnalysisBase_compute_psd_not_implemented():
     )
 
 
-def test_SpectrumAnalysisBase_call(mocker):
+def test_SpectrumAnalysisBase_call(mocker) -> None:
     # Test SpectrumAnalysisBase default
     analyzer = SpectrumAnalysisBase(
         window_length_for_welch=8, band_display=(10, 200), tag="Custom Analysis"
@@ -77,7 +77,7 @@ def test_SpectrumAnalysisBase_call(mocker):
             assert "psd" in channel_data
 
 
-def test_SpectrumAnalysisWelch(tmp_path):
+def test_SpectrumAnalysisWelch(tmp_path) -> None:
     analysis = SpectrumAnalysisWelch()
     psd_dict = analysis(mock_signal_generator())
 
@@ -102,7 +102,7 @@ def test_SpectrumAnalysisWelch(tmp_path):
             assert range_psd_sum / total_psd_sum >= 0.9
 
 
-def test_SpectrumAnalysisPeriodogram(tmp_path):
+def test_SpectrumAnalysisPeriodogram(tmp_path) -> None:
     analysis = SpectrumAnalysisPeriodogram()
     psd_dict = analysis(mock_signal_generator())
 
@@ -126,7 +126,7 @@ def test_SpectrumAnalysisPeriodogram(tmp_path):
             assert range_psd_sum / total_psd_sum >= 0.9
 
 
-def test_SpectrumAnalysisWelch_compute_psd():
+def test_SpectrumAnalysisWelch_compute_psd() -> None:
     analyzer = SpectrumAnalysisWelch()
     psd_dict_mock = {
         0: {  # Channel index 0
@@ -166,7 +166,7 @@ def test_SpectrumAnalysisWelch_compute_psd():
     assert len(result) == 2
 
 
-def test_SpectrumAnalysisPeriodogram_compute_psd():
+def test_SpectrumAnalysisPeriodogram_compute_psd() -> None:
     analyzer = SpectrumAnalysisPeriodogram()
     psd_dict_mock = {
         0: {  # Channel index 0
