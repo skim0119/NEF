@@ -26,6 +26,7 @@ def mock_signal_generator():
     signal2 = Signal(data=data2, timestamps=timestamps, rate=100.0)
     yield signal2
 
+
 def test_SpectrumAnalysisBase_compute_psd_not_implemented():
     analyzer = SpectrumAnalysisBase()
     signal = next(mock_signal_generator())
@@ -38,6 +39,7 @@ def test_SpectrumAnalysisBase_compute_psd_not_implemented():
         "such as SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram, or SpectrumAnalysisMultitaper."
     )
 
+
 def test_SpectrumAnalysisBase_call(mocker):
     # Test SpectrumAnalysisBase default
     analyzer = SpectrumAnalysisBase(
@@ -48,7 +50,9 @@ def test_SpectrumAnalysisBase_call(mocker):
     assert analyzer.tag == "Custom Analysis"
 
     # Test SpectrumAnalysisBase __call__
-    mock_compute_psd = mocker.patch.object(SpectrumAnalysisBase, "compute_psd", return_value=defaultdict(dict))
+    mock_compute_psd = mocker.patch.object(
+        SpectrumAnalysisBase, "compute_psd", return_value=defaultdict(dict)
+    )
     analyzer = SpectrumAnalysisBase()
     result = analyzer(mock_signal_generator())
 
@@ -121,6 +125,7 @@ def test_SpectrumAnalysisPeriodogram(tmp_path):
 
             assert range_psd_sum / total_psd_sum >= 0.9
 
+
 def test_SpectrumAnalysisWelch_compute_psd():
     analyzer = SpectrumAnalysisWelch()
     psd_dict_mock = {
@@ -146,14 +151,20 @@ def test_SpectrumAnalysisWelch_compute_psd():
         assert len(result[channel_index]["psd"]) == 7
 
         # Validate numerical values
-        np.testing.assert_array_equal(result[channel_index]["freqs"][:6], psd_dict_mock[channel_index]["freqs"][:6])
-        np.testing.assert_array_equal(result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6])
+        np.testing.assert_array_equal(
+            result[channel_index]["freqs"][:6],
+            psd_dict_mock[channel_index]["freqs"][:6],
+        )
+        np.testing.assert_array_equal(
+            result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6]
+        )
 
     psd_dict = {}
     result = analyzer.compute_psd(signal, psd_dict)
 
     assert isinstance(result, dict)
     assert len(result) == 2
+
 
 def test_SpectrumAnalysisPeriodogram_compute_psd():
     analyzer = SpectrumAnalysisPeriodogram()
@@ -180,8 +191,16 @@ def test_SpectrumAnalysisPeriodogram_compute_psd():
         assert len(result[channel_index]["psd"]) == 7
 
         # Validate numerical values
-        np.testing.assert_array_equal(result[channel_index]["freqs"][:6], psd_dict_mock[channel_index]["freqs"][:6])
-        np.testing.assert_array_equal(result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6])
+        np.testing.assert_array_equal(
+            result[channel_index]["freqs"][:6],
+            psd_dict_mock[channel_index]["freqs"][:6],
+        )
+        np.testing.assert_array_equal(
+            result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6]
+        )
 
+    psd_dict = {}
+    result = analyzer.compute_psd(signal, psd_dict)
 
-
+    assert isinstance(result, dict)
+    assert len(result) == 2
