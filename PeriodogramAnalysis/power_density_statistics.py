@@ -13,7 +13,6 @@ from miv.core.operator.operator import OperatorMixin
 from miv.core.operator.wrapper import cache_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
-from multitaper_spectrum_statistics import multitaper_psd
 
 
 @dataclass
@@ -169,26 +168,3 @@ class SpectrumAnalysisPeriodogram(SpectrumAnalysisBase):
             psd_periodogram_dict[channel_index]["psd"].append(psd)
 
         return psd_periodogram_dict
-
-
-@dataclass
-class SpectrumAnalysisMultitaper(SpectrumAnalysisBase):
-    """
-    A class that performs spectral analysis using the Multitaper method.
-    """
-
-    tag: str = "Multitaper PSD spectrum analysis"
-
-    def compute_psd(
-        self, signal: Signal, psd_multitaper_dict: dict[int, dict[str, Any]]
-    ) -> dict[int, dict[str, Any]]:
-        for channel_index, channel_signal in enumerate(signal):
-            signal_no_bias = channel_signal - np.mean(channel_signal)
-            psd, freqs = multitaper_psd(signal_no_bias, signal.rate)
-
-            if channel_index not in psd_multitaper_dict:
-                psd_multitaper_dict[channel_index] = {"freqs": [], "psd": []}
-            psd_multitaper_dict[channel_index]["freqs"].append(freqs)
-            psd_multitaper_dict[channel_index]["psd"].append(psd)
-
-        return psd_multitaper_dict
