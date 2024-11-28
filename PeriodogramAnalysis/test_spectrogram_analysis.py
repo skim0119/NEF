@@ -52,7 +52,7 @@ def test_computing_spectrum() -> None:
     Test the computing_spectrum method.
     """
     power_analysis = SpectrogramAnalysis()
-    spec_dict: dict[str, Any] = {}
+    spec_dict: dict[int, dict[str, Any]] = {}
 
     signal_gen = signal_input()
     signal = next(signal_gen)
@@ -77,4 +77,3 @@ def test_computing_spectrum() -> None:
             np.testing.assert_allclose(channel_data["times"][i], times_expected)
             np.testing.assert_allclose(channel_data["Sxx"][i], sxx_expected)
 
-    print("All tests passed successfully.")

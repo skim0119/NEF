@@ -96,8 +96,9 @@ class SpectrogramAnalysis(OperatorMixin):
 
         for channel in spec_dict.keys():
             for chunk in range(len(spec_dict[channel]["frequencies"])):
-                channel_folder = os.path.join(save_path, f"channel{channel:03d}")
-                os.makedirs(channel_folder, exist_ok=True)
+                if save_path is not None:
+                    channel_folder = os.path.join(save_path, f"channel{channel:03d}")
+                    os.makedirs(channel_folder, exist_ok=True)
 
                 frequencies = spec_dict[channel]["frequencies"][chunk]
                 times = spec_dict[channel]["times"][chunk]

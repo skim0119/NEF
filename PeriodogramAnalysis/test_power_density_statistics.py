@@ -33,7 +33,7 @@ def mock_signal_generator() -> Generator:
 def test_SpectrumAnalysisBase_compute_psd_not_implemented() -> None:
     analyzer = SpectrumAnalysisBase()
     signal = next(mock_signal_generator())
-    psd_dict: dict[str, Any] = {}
+    psd_dict: dict[int, dict[str, Any]] = {}
     with pytest.raises(NotImplementedError) as exc_info:
         analyzer.compute_psd(signal, psd_dict)
     assert str(exc_info.value) == (
@@ -162,7 +162,7 @@ def test_SpectrumAnalysisWelch_compute_psd() -> None:
             result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6]
         )
 
-    psd_dict: dict[str, Any] = {}
+    psd_dict: dict[int, dict[str, Any]] = {}
     result = analyzer.compute_psd(signal, psd_dict)
 
     assert isinstance(result, dict)
@@ -202,7 +202,7 @@ def test_SpectrumAnalysisPeriodogram_compute_psd() -> None:
             result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6]
         )
 
-    psd_dict: dict[str, Any] = {}
+    psd_dict: dict[int, dict[str, Any]] = {}
     result = analyzer.compute_psd(signal, psd_dict)
 
     assert isinstance(result, dict)

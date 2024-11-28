@@ -20,10 +20,10 @@ working_directory = "results"
 dataset: DataManager = DataManager(data_collection_path=path)
 data: DataLoader = dataset[0]
 
-spectrum_welch: Operator = SpectrumAnalysisWelch()
-spectrum_per: Operator = SpectrumAnalysisPeriodogram()
-Periodogram_Analysis: Operator = PowerSpectrumAnalysis()
-Spec_Analysis: Operator = SpectrogramAnalysis()
+spectrum_welch = SpectrumAnalysisWelch()
+spectrum_per = SpectrumAnalysisPeriodogram()
+Periodogram_Analysis = PowerSpectrumAnalysis()
+Spec_Analysis = SpectrogramAnalysis()
 
 data >> spectrum_welch >> Periodogram_Analysis
 data >> spectrum_per
