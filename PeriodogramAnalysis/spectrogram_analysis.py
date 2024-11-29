@@ -79,7 +79,13 @@ class SpectrogramAnalysis(OperatorMixin):
 
         return spec_dict
 
-    def plot_spectrogram(self, output: dict, input: None, show: bool=False, save_path: Optional[pathlib.Path]=None) -> None:
+    def plot_spectrogram(
+        self,
+        output: dict,
+        input: None,
+        show: bool = False,
+        save_path: Optional[pathlib.Path] = None,
+    ) -> None:
         """
         Plot spectrogram of the signal for given chunks and channels.
 

@@ -1,6 +1,5 @@
 from typing import Any, Optional, Tuple
 
-from pytest_mock import MockerFixture
 import numpy as np
 from spectrum_analysis import PowerSpectrumAnalysis
 from scipy.integrate import simpson
@@ -132,7 +131,7 @@ def test_computing_absolute_and_relative_power() -> None:
         assert np.isclose(manual_rel_power, computed_rel_power)
 
 
-def test_computing_ratio_and_bandpower(mocker: MockerFixture) -> None:
+def test_computing_ratio_and_bandpower(mocker) -> None:
     """
     Test computing_ratio_and_bandpower, test how many logger are called.
     """
@@ -148,4 +147,3 @@ def test_computing_ratio_and_bandpower(mocker: MockerFixture) -> None:
 
     # Test how many times logger is called
     assert logger_info_spy.call_count == 11 * 2
-

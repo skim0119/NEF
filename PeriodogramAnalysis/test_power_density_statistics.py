@@ -1,6 +1,5 @@
 from typing import Generator, Any
 
-from pytest_mock import MockerFixture
 import numpy as np
 import pytest
 from collections import defaultdict
@@ -43,7 +42,7 @@ def test_SpectrumAnalysisBase_compute_psd_not_implemented() -> None:
     )
 
 
-def test_SpectrumAnalysisBase_call(mocker: MockerFixture) -> None:
+def test_SpectrumAnalysisBase_call(mocker) -> None:
     # Test SpectrumAnalysisBase default
     analyzer = SpectrumAnalysisBase(
         window_length_for_welch=8, band_display=(10, 200), tag="Custom Analysis"

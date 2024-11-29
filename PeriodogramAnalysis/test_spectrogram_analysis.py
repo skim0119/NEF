@@ -75,4 +75,3 @@ def test_computing_spectrum() -> None:
             np.testing.assert_allclose(channel_data["frequencies"][i], freqs_expected)
             np.testing.assert_allclose(channel_data["times"][i], times_expected)
             np.testing.assert_allclose(channel_data["Sxx"][i], sxx_expected)
-
