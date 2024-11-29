@@ -148,3 +148,4 @@ def test_computing_ratio_and_bandpower(mocker: MockerFixture) -> None:
 
     # Test how many times logger is called
     assert logger_info_spy.call_count == 11 * 2
+

@@ -2,7 +2,6 @@ from typing import Generator, Any
 
 import numpy as np
 from scipy.signal import spectrogram
-
 from miv.core.datatype import Signal
 from spectrogram_analysis import SpectrogramAnalysis
 
@@ -25,7 +24,7 @@ def signal_input() -> Generator:
     yield signal2
 
 
-def test_SpectrumAnalysis_call() -> None:
+def test_spectrum_analysis_call() -> None:
     """
     Test call func and computing_spectrum, check if spec_dict is as expected.
     """
