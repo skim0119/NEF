@@ -15,7 +15,7 @@ formatting:
 #* Linting
 .PHONY: test
 test:
-	pytest -c pyproject.toml --cov=miv --cov-report=xml --cov-fail-under=80
+	pytest -c pyproject.toml --cov=PeriodogramAnalysis --cov-fail-under=80
 
 .PHONY: check-codestyle
 check-codestyle:
