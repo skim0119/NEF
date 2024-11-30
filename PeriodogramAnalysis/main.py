@@ -18,7 +18,7 @@ print(path)
 working_directory = "results"
 
 dataset: DataManager = DataManager(data_collection_path=path)
-data: DataLoader = dataset[0]
+data = dataset[0]
 
 spectrum_welch = SpectrumAnalysisWelch()
 spectrum_per = SpectrumAnalysisPeriodogram()
