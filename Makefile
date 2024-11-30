@@ -10,7 +10,7 @@ install:
 #* Formatters
 .PHONY: formatting
 formatting:
-	poetry run black --config pyproject.toml ./
+	black --config pyproject.toml ./
 
 #* Linting
 .PHONY: test
@@ -20,7 +20,7 @@ test:
 .PHONY: check-codestyle
 check-codestyle:
 	black --diff --check --config pyproject.toml ./
-	# poetry run isort --diff --check-only --settings-path pyproject.toml ./
+	# isort --diff --check-only --settings-path pyproject.toml ./
 
 .PHONY: mypy
 mypy:
