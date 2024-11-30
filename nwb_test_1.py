@@ -1,36 +1,14 @@
 import os
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
 from pynwb import NWBHDF5IO
 
 from miv.core.datatype import Signal, Spikestamps
-from power_density_statistics import (
-    SpectrumAnalysisPeriodogram,
-    SpectrumAnalysisWelch,
-)
 
-file_path = "/Users/aia/Downloads/RecordNode103__experiment1__recording1.nwb"
+file_path = "/Users/skim0119/Results/RecordNode103__experiment1__recording1.nwb"
 
-# Generate lfp signal
-def lfp_signal_generator(lfp_series):
-    sampling_rate = lfp_series.rate
-    num_chunks = lfp_series.data.shape[0]
-
-    for chunk in range(num_chunks):
-        lfp_data = lfp_series.data[chunk, :, :]
-
-        timestamps = np.linspace(
-            chunk * len(lfp_data) / sampling_rate,
-            (chunk + 1) * len(lfp_data) / sampling_rate,
-            len(lfp_data)
-        )
-
-        yield Signal(
-            data=lfp_data,
-            timestamps=timestamps,
-            rate=sampling_rate
-        )
 
 # Generate spike train
 def spike_train_generator(spike_series, segment_length=60):
@@ -45,7 +23,7 @@ def spike_train_generator(spike_series, segment_length=60):
         # Get spike index for each chunk
         start_idx = np.searchsorted(spike_timestamps, start_time, side="left")
         end_idx = np.searchsorted(spike_timestamps, end_time, side="right")
-        
+
         # Generate a matrix that contain every timestamp of each channel
         time_matrix = []
 
@@ -64,6 +42,7 @@ def spike_train_generator(spike_series, segment_length=60):
 
         start_time += segment_length
 
+
 with NWBHDF5IO(file_path, "r") as io:
     nwbfile = io.read()
     print("Top-level keys in NWB file:", nwbfile.fields.keys())
@@ -74,39 +53,22 @@ with NWBHDF5IO(file_path, "r") as io:
     # print(nwbfile.electrodes)
     print(nwbfile.processing)
 
-    # lfp_interface = nwbfile.processing["ecephys"].data_interfaces["LFP"]
-    # lfp_series = lfp_interface.electrical_series["ElectricalSeries"]
-    #
-    # lfp_gen = lfp_signal_generator(lfp_series)
-    #
-    # chunk_limit = 0
-    # channel_limit = 0
-    # chunk = 0
-    #
-    # spectrum_welch = SpectrumAnalysisWelch()
-    # result = spectrum_welch(lfp_gen)
-    #
-    # signal_summary_file_path = "./signal_analysis"
-    # for signal_chunk in lfp_gen:
-    #     for channel in range(channel_limit):
-    #         plt.figure(figsize=(10, 4))
-    #         plt.plot(signal_chunk.timestamps, signal_chunk.data[:, channel])
-    #         plt.title("LFP Signal")
-    #         plt.xlabel("Time (s)")
-    #         plt.ylabel("Amplitude")
-    #         plt.grid()
-    #         plot_path = os.path.join(signal_summary_file_path, f"lfp_figure_chunk{signal_chunk}_channel{channel}.png")
-    #         os.makedirs(signal_summary_file_path, exist_ok=True)
-    #         plt.savefig(plot_path, dpi=300)
-    #         plt.close()
-    #
-    #     chunk += 1
-    #     if chunk == channel_limit:
-    #         break
-
     # Open spike data
     spike_series = nwbfile.acquisition["Spike Events"]
     print(spike_series)
+
+    breakpoint()
+
+    data = spike_series.data[:].T
+    time = spike_series.timestamps[:]
+
+    plt.imshow(data, cmap="gray_r", extent=(time[0], time[-1], 1, data.shape[0]  ))
+    plt.gca().set_aspect('auto')
+    plt.xlim(time[0], time[0]+10)
+    plt.show()
+
+
+    sys.exit()
 
     spike_gen = spike_train_generator(spike_series)
     chunk_limit = 2
@@ -123,12 +85,13 @@ with NWBHDF5IO(file_path, "r") as io:
         plt.title(f"Spike Train - All Channels (Chunk {chunk})")
         plt.xlabel("Time (s)")
         plt.ylabel("Channel Index")
-        plt.legend(loc='upper right')
-        plot_path = os.path.join(spike_summary_file_path, f"spike_train_chunk{chunk}_all_channels.png")
+        plt.legend(loc="upper right")
+        plot_path = os.path.join(
+            spike_summary_file_path, f"spike_train_chunk{chunk}_all_channels.png"
+        )
         os.makedirs(spike_summary_file_path, exist_ok=True)
         plt.savefig(plot_path, dpi=300)
         plt.close()
-
 
         chunk += 1
         if chunk == channel_limit:
