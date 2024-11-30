@@ -4,3 +4,5 @@ scipy
 matplotlib
 pytest
 pytest-cov
+black
+mypy
