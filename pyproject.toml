@@ -52,6 +52,10 @@ show_error_context = true
 # Directories that are not visited by pytest collector:
 norecursedirs =["hooks", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
 doctest_optionflags = ["NUMBER", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL", "ELLIPSIS"]
+testpaths = [
+    "PeriodogramAnalysis",
+    # "tests",
+]
 
 # Extra options:
 addopts = [
