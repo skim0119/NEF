@@ -12,6 +12,7 @@ from power_density_statistics import (
 
 file_path = "/Users/aia/Downloads/RecordNode103__experiment1__recording1.nwb"
 
+# Generate lfp signal
 def lfp_signal_generator(lfp_series):
     sampling_rate = lfp_series.rate
     num_chunks = lfp_series.data.shape[0]
@@ -31,7 +32,7 @@ def lfp_signal_generator(lfp_series):
             rate=sampling_rate
         )
 
-
+# Generate spike train
 def spike_train_generator(spike_series, segment_length=60):
     spike_timestamps = spike_series.timestamps[:]
     max_time = spike_timestamps.max()
@@ -41,13 +42,19 @@ def spike_train_generator(spike_series, segment_length=60):
     while start_time < max_time:
         end_time = start_time + segment_length
 
+        # Get spike index for each chunk
         start_idx = np.searchsorted(spike_timestamps, start_time, side="left")
         end_idx = np.searchsorted(spike_timestamps, end_time, side="right")
+        
+        # Generate a matrix that contain every timestamp of each channel
         time_matrix = []
 
+        # Gather timestamps for a channel
         for channel in range(num_channels):
             channel_timestamps = spike_timestamps[start_idx:end_idx]
             channel_spikes = spike_series.data[start_idx:end_idx, channel]
+
+            # Only save spike time in channel_spikes
             valid_mask = channel_spikes > 0
             valid_timestamps = channel_timestamps[valid_mask]
 
@@ -97,7 +104,7 @@ with NWBHDF5IO(file_path, "r") as io:
     #     if chunk == channel_limit:
     #         break
 
-
+    # Open spike data
     spike_series = nwbfile.acquisition["Spike Events"]
     print(spike_series)
 
@@ -106,6 +113,7 @@ with NWBHDF5IO(file_path, "r") as io:
     channel_limit = 2
     chunk = 0
 
+    # Plot spike data
     spike_summary_file_path = "./spike_analysis"
     for spike_chunk in spike_gen:
         for channel, spike_times in enumerate(spike_chunk):
