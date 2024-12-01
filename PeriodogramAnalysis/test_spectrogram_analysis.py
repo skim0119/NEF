@@ -26,7 +26,9 @@ def signal_input() -> Generator:
 
 def test_spectrum_analysis_call() -> None:
     """
-    Test call func and computing_spectrum, check if spec_dict is as expected.
+    This test if the returned dict has proper shape and content. If it fails, I think it indicates
+    dict's formation is wrong. The parameters selected are the keys of this dict. And I use the last three lines to
+    test if it contains data from all chunks.
     """
     spectrum_analysis = SpectrogramAnalysis()
     spec_dict = spectrum_analysis(signal_input())
@@ -48,7 +50,12 @@ def test_spectrum_analysis_call() -> None:
 
 def test_computing_spectrum() -> None:
     """
-    Test the computing_spectrum method.
+    This is used to test the computation of spectrum. I compare the result of official "spectrogram" function and
+    the data of the dict. If it fails, I think it also indicates the shape of the dict is wrong and "spectrogram" may
+    not get proper data.
+
+    I am also not sure if it is reasonable to use "spectrogram" again, because in "computing_spectrum"
+    I also used "spectrogram".
     """
     power_analysis = SpectrogramAnalysis()
     spec_dict: dict[int, dict[str, Any]] = {}

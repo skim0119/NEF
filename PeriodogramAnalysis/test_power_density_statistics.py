@@ -30,6 +30,9 @@ def mock_signal_generator() -> Generator:
 
 
 def test_SpectrumAnalysisBase_compute_psd_not_implemented() -> None:
+    """
+    This test is used to test if no subclass is used, will it pop up proper error.
+    """
     analyzer = SpectrumAnalysisBase()
     signal = next(mock_signal_generator())
     psd_dict: dict[int, dict[str, Any]] = {}
@@ -43,6 +46,14 @@ def test_SpectrumAnalysisBase_compute_psd_not_implemented() -> None:
 
 
 def test_SpectrumAnalysisBase_call(mocker) -> None:
+    """
+    This test is first to test if the default value of base class it as expected, second
+    to test if the dict returned by call is correct, if it fails, the call function may be incorrect
+    the functions may not be properly called and the dict's layers might be wrong.
+
+    I mock "compute_psd" and see how many times it is called to see if it is used to handle all chunks.
+    "freqs" and "psd" are keys of the dict.
+    """
     # Test SpectrumAnalysisBase default
     analyzer = SpectrumAnalysisBase(
         window_length_for_welch=8, band_display=(10, 200), tag="Custom Analysis"
@@ -80,6 +91,11 @@ def test_SpectrumAnalysisBase_call(mocker) -> None:
 
 
 def test_SpectrumAnalysisWelch() -> None:
+    """
+    Test if welch method is correct, for this input signal, the psd should have peaks at given frequencies,
+    So I test if the returned result has peaks there.
+    If it failed, it should be wrong with welch method, perhaps the calculation is wrong.
+    """
     analysis = SpectrumAnalysisWelch()
     psd_dict = analysis(mock_signal_generator())
 
@@ -105,6 +121,9 @@ def test_SpectrumAnalysisWelch() -> None:
 
 
 def test_SpectrumAnalysisPeriodogram() -> None:
+    """
+    Same as previous one.
+    """
     analysis = SpectrumAnalysisPeriodogram()
     psd_dict = analysis(mock_signal_generator())
 
@@ -129,6 +148,13 @@ def test_SpectrumAnalysisPeriodogram() -> None:
 
 
 def test_SpectrumAnalysisWelch_compute_psd() -> None:
+    """
+    Test compute_psd along, see if compute_psd is working properly.
+    I want to see if this func can append freqs and psd of the new chunk to the end of existing dict.
+
+    I think it is now useless, it duplicates the previous test. I wrote this because coverage that this part is not covered...
+    It should be better to be included in test_SpectrumAnalysisBase_call
+    """
     analyzer = SpectrumAnalysisWelch()
     psd_dict_mock: dict[int, dict[str, Any]] = {
         0: {  # Channel index 0
@@ -169,6 +195,9 @@ def test_SpectrumAnalysisWelch_compute_psd() -> None:
 
 
 def test_SpectrumAnalysisPeriodogram_compute_psd() -> None:
+    """
+    Same as previous one.
+    """
     analyzer = SpectrumAnalysisPeriodogram()
     psd_dict_mock: dict[int, dict[str, Any]] = {
         0: {  # Channel index 0

@@ -68,8 +68,10 @@ def psd_input() -> dict[int, dict[str, Any]]:
 
 def test_power_spectrum_analysis_call() -> None:
     """
-    Test PowerSpectrumAnalysis class to ensure it computes the power_dict correctly
-    based on the provided psd_dict, and returns the expected values.
+    Test PowerSpectrumAnalysis class is retuning proper dicts, first see if the returned psd_dict is the same
+    as the input psd_dict, and second test if power_dict has proper shape and content.
+
+    I think if it fails, it means the formation of dicts are wrong. But it might not because of call itself, but other functions.
     """
     psd_dict = psd_input()
     analysis = PowerSpectrumAnalysis()
@@ -96,7 +98,8 @@ def test_power_spectrum_analysis_call() -> None:
 
 def test_computing_absolute_and_relative_power() -> None:
     """
-    Test the computing_absolute_and_relative_power method.
+    Test if the returned data is the same as official "simpson" result.
+    If this test fails, but the previous passes, I think it is still the reason of this function.
     """
 
     power_analysis = PowerSpectrumAnalysis(
@@ -133,7 +136,10 @@ def test_computing_absolute_and_relative_power() -> None:
 
 def test_computing_ratio_and_bandpower(mocker) -> None:
     """
-    Test computing_ratio_and_bandpower, test how many logger are called.
+    This is just used to check if enough data is collected, if
+    it fails, I think the dicts may not be split properly.
+
+    this test can be further extended to numerical test.
     """
     channel_idx = 0
     analysis = PowerSpectrumAnalysis()
