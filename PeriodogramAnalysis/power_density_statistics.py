@@ -28,6 +28,11 @@ class SpectrumAnalysisBase(GeneratorOperatorMixin):
 
     def __post_init__(self) -> None:
         super().__init__()
+        if (
+            not isinstance(self.window_length_for_welch, int)
+            or self.window_length_for_welch <= 0
+        ):
+            raise ValueError("window_length_for_welch must be a positive integer.")
         self.chunk: int = 0
 
     @cache_generator_call

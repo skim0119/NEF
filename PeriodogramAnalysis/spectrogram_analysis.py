@@ -38,7 +38,7 @@ class SpectrogramAnalysis(GeneratorOperatorMixin):
         self.chunk: int = -1
 
     @cache_generator_call
-    def __call__(self, signal: Signal):
+    def __call__(self, signal: Signal) -> tuple:
         """
         Perform spectrum analysis on the given signal.
 

@@ -2,7 +2,6 @@ from typing import Generator, Any
 
 import numpy as np
 import pytest
-from collections import defaultdict
 from miv.core.datatype import Signal
 from power_density_statistics import (
     SpectrumAnalysisBase,
@@ -11,7 +10,7 @@ from power_density_statistics import (
 )
 
 
-def mock_signal_generator() -> Generator:
+def mock_signal_generator():
     timestamps = np.linspace(0, 10, 1000, endpoint=False)
     signal = (
         np.sin(2 * np.pi * 5 * timestamps)
@@ -21,217 +20,77 @@ def mock_signal_generator() -> Generator:
     )
 
     data1 = np.array([signal, signal]).T
-    signal1 = Signal(data=data1, timestamps=timestamps, rate=100)
-    yield signal1
-
-    data2 = np.array([signal, signal]).T
-    signal2 = Signal(data=data2, timestamps=timestamps, rate=100)
-    yield signal2
+    signal = Signal(data=data1, timestamps=timestamps, rate=100)
+    return signal
 
 
-def test_SpectrumAnalysisBase_compute_psd_not_implemented() -> None:
-    """
-    This test is used to test if no subclass is used, will it pop up proper error.
-    """
-    analyzer = SpectrumAnalysisBase()
-    signal = next(mock_signal_generator())
-    psd_dict: dict[int, dict[str, Any]] = {}
-    with pytest.raises(NotImplementedError) as exc_info:
-        analyzer.compute_psd(signal, psd_dict)
-    assert str(exc_info.value) == (
-        "The compute_psd method is not implemented in the base class. "
-        "This base class is not intended for standalone use. Please use a subclass "
-        "such as SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram, or SpectrumAnalysisMultitaper."
-    )
+def test_call_invalid_input_parameters():
+    with pytest.raises(NotImplementedError):
+        analyzer = SpectrumAnalysisBase(window_length_for_welch=4)
+        analyzer(mock_signal_generator())
+
+    with pytest.raises(ValueError):
+        SpectrumAnalysisWelch(window_length_for_welch=-1)
+
+    with pytest.raises(ValueError):
+        SpectrumAnalysisWelch(window_length_for_welch=0.75)
 
 
-def test_SpectrumAnalysisBase_call(mocker) -> None:
-    """
-    This test is first to test if the default value of base class it as expected, second
-    to test if the dict returned by call is correct, if it fails, the call function may be incorrect
-    the functions may not be properly called and the dict's layers might be wrong.
-
-    I mock "compute_psd" and see how many times it is called to see if it is used to handle all chunks.
-    "freqs" and "psd" are keys of the dict.
-    """
-    # Test SpectrumAnalysisBase default
-    analyzer = SpectrumAnalysisBase(
-        window_length_for_welch=8, band_display=(10, 200), tag="Custom Analysis"
-    )
-    assert analyzer.window_length_for_welch == 8
-    assert analyzer.band_display == (10, 200)
-    assert analyzer.tag == "Custom Analysis"
-
-    # Test SpectrumAnalysisBase __call__
-    mock_compute_psd = mocker.patch.object(
-        SpectrumAnalysisBase, "compute_psd", return_value=defaultdict(dict)
-    )
-    analyzer = SpectrumAnalysisBase()
+def test_call_return_shape():
+    analyzer = SpectrumAnalysisWelch(window_length_for_welch=4)
     result = analyzer(mock_signal_generator())
+    freqs, psd = result
 
-    assert mock_compute_psd.call_count == 2
-    assert result == defaultdict(dict)
-
-    # Test __call__ of children class
-    analysis_wel = SpectrumAnalysisWelch()
-    psd_dict_wel = analysis_wel(mock_signal_generator())
-    analysis_per = SpectrumAnalysisPeriodogram()
-    psd_dict_per = analysis_per(mock_signal_generator())
-
-    psd_dict_list = [psd_dict_wel, psd_dict_per]
-
-    for psd_dict in psd_dict_list:
-        assert isinstance(psd_dict, dict)
-        assert len(psd_dict) == 2
-
-        # check the content of spec_dict
-        for channel, channel_data in psd_dict.items():
-            assert "freqs" in channel_data
-            assert "psd" in channel_data
-
-
-def test_SpectrumAnalysisWelch() -> None:
-    """
-    Test if welch method is correct, for this input signal, the psd should have peaks at given frequencies,
-    So I test if the returned result has peaks there.
-    If it failed, it should be wrong with welch method, perhaps the calculation is wrong.
-    """
-    analysis = SpectrumAnalysisWelch()
-    psd_dict = analysis(mock_signal_generator())
-
-    for channel, channel_data in psd_dict.items():
-        for chunk in range(len(psd_dict[channel]["freqs"])):
-            freqs = channel_data["freqs"][chunk]
-            freqs = np.array(freqs)
-            psd = channel_data["psd"][chunk]
-            total_psd_sum = np.sum(psd)
-            expected_freqs = [5, 10, 15, 20]
-
-            range_psd_sum = 0
-            for exp_freq in expected_freqs:
-                range_psd_sum += np.sum(
-                    psd[(freqs >= exp_freq - 1) & (freqs <= exp_freq + 1)]
-                )
-
-                idx = np.argmin(np.abs(freqs - exp_freq))
-                # Test the peaks of psd is as expected
-                assert np.isclose(freqs[idx], exp_freq)
-            # Test the psd around peaks comprises more than 90% of total psd
-            assert range_psd_sum / total_psd_sum >= 0.9
-
-
-def test_SpectrumAnalysisPeriodogram() -> None:
-    """
-    Same as previous one.
-    """
-    analysis = SpectrumAnalysisPeriodogram()
-    psd_dict = analysis(mock_signal_generator())
-
-    for channel, channel_data in psd_dict.items():
-        for chunk in range(len(psd_dict[channel]["freqs"])):
-            freqs = channel_data["freqs"][chunk]
-            freqs = np.array(freqs)
-            psd = channel_data["psd"][chunk]
-            total_psd_sum = np.sum(psd)
-            expected_freqs = [5, 10, 15, 20]
-
-            range_psd_sum = 0
-            for exp_freq in expected_freqs:
-                range_psd_sum += np.sum(
-                    psd[(freqs >= exp_freq - 1) & (freqs <= exp_freq + 1)]
-                )
-
-                idx = np.argmin(np.abs(freqs - exp_freq))
-                assert np.isclose(freqs[idx], exp_freq)
-
-            assert range_psd_sum / total_psd_sum >= 0.9
-
-
-def test_SpectrumAnalysisWelch_compute_psd() -> None:
-    """
-    Test compute_psd along, see if compute_psd is working properly.
-    I want to see if this func can append freqs and psd of the new chunk to the end of existing dict.
-
-    I think it is now useless, it duplicates the previous test. I wrote this because coverage that this part is not covered...
-    It should be better to be included in test_SpectrumAnalysisBase_call
-    """
-    analyzer = SpectrumAnalysisWelch()
-    psd_dict_mock: dict[int, dict[str, Any]] = {
-        0: {  # Channel index 0
-            "freqs": [0, 4, 9, 14, 19, 24],
-            "psd": [0, 0.4, 0.5, 0.4, 0.2, 0.1],
-        },
-        1: {  # Channel index 1
-            "freqs": [0, 5, 10, 15, 20, 25],
-            "psd": [0, 0.5, 0.3, 0.2, 0.1, 0],
-        },
-    }
-    signal = next(mock_signal_generator())
-    result = analyzer.compute_psd(signal, psd_dict_mock)
-
-    assert isinstance(result, dict)
-    assert len(result) == 2  # Two channels
-    for channel_index in range(2):  # Two channels
-        assert channel_index in result
-        assert "freqs" in result[channel_index]
-        assert "psd" in result[channel_index]
-        assert len(result[channel_index]["freqs"]) == 7
-        assert len(result[channel_index]["psd"]) == 7
-
-        # Validate numerical values
-        np.testing.assert_array_equal(
-            result[channel_index]["freqs"][:6],
-            psd_dict_mock[channel_index]["freqs"][:6],
-        )
-        np.testing.assert_array_equal(
-            result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6]
-        )
-
-    psd_dict: dict[int, dict[str, Any]] = {}
-    result = analyzer.compute_psd(signal, psd_dict)
-
-    assert isinstance(result, dict)
+    assert isinstance(result, tuple)
     assert len(result) == 2
+    assert isinstance(freqs, np.ndarray)
+    assert isinstance(psd, np.ndarray)
+    assert freqs.shape[0] == 801
+    assert psd.shape[1] == 2
 
 
-def test_SpectrumAnalysisPeriodogram_compute_psd() -> None:
-    """
-    Same as previous one.
-    """
-    analyzer = SpectrumAnalysisPeriodogram()
-    psd_dict_mock: dict[int, dict[str, Any]] = {
-        0: {  # Channel index 0
-            "freqs": [0, 4, 9, 14, 19, 24],
-            "psd": [0, 0.4, 0.5, 0.4, 0.2, 0.1],
-        },
-        1: {  # Channel index 1
-            "freqs": [0, 5, 10, 15, 20, 25],
-            "psd": [0, 0.5, 0.3, 0.2, 0.1, 0],
-        },
-    }
-    signal = next(mock_signal_generator())
-    result = analyzer.compute_psd(signal, psd_dict_mock)
+@pytest.mark.parametrize(
+    "analysis_class",
+    [SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram],
+)
+def test_spectrum_analysis_computation(analysis_class) -> None:
+    analysis = analysis_class()
+    freqs, psd = analysis(mock_signal_generator())
 
-    assert isinstance(result, dict)
-    assert len(result) == 2  # Two channels
-    for channel_index in range(2):  # Two channels
-        assert channel_index in result
-        assert "freqs" in result[channel_index]
-        assert "psd" in result[channel_index]
-        assert len(result[channel_index]["freqs"]) == 7
-        assert len(result[channel_index]["psd"]) == 7
+    for channel in range(2):
+        psd_channel = psd[:, channel]
+        total_psd_sum = np.sum(psd_channel)
+        expected_freqs = [5, 10, 15, 20]
 
-        # Validate numerical values
-        np.testing.assert_array_equal(
-            result[channel_index]["freqs"][:6],
-            psd_dict_mock[channel_index]["freqs"][:6],
-        )
-        np.testing.assert_array_equal(
-            result[channel_index]["psd"][:6], psd_dict_mock[channel_index]["psd"][:6]
-        )
+        range_psd_sum = 0
+        for exp_freq in expected_freqs:
+            range_psd_sum += np.sum(
+                psd[(freqs >= exp_freq - 1) & (freqs <= exp_freq + 1)]
+            )
+            idx = np.argmin(np.abs(freqs - exp_freq))
+            spike_psd = psd[idx, channel]
+            # Test the peaks of psd is as expected
+            assert np.isclose(freqs[idx], exp_freq)
+        # Test the psd around peaks comprises more than 90% of total psd
+        assert range_psd_sum / total_psd_sum >= 0.9
 
-    psd_dict: dict[int, dict[str, Any]] = {}
-    result = analyzer.compute_psd(signal, psd_dict)
+        for i, freq in enumerate(freqs):
+            if all(abs(freq - exp_freq) > 1 for exp_freq in expected_freqs):
+                assert psd[i, channel] < 0.05 * spike_psd
 
-    assert isinstance(result, dict)
-    assert len(result) == 2
+
+@pytest.mark.parametrize(
+    "analysis_class",
+    [SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram],
+)
+def test_different_sampling_rates(analysis_class):
+    for rate in [50, 200, 500]:
+        timestamps = np.linspace(0, 10, rate * 10, endpoint=False)
+        signal_data = np.sin(2 * np.pi * 5 * timestamps)
+        data = np.array([signal_data, signal_data]).T
+        signal = Signal(data=data, timestamps=timestamps, rate=rate)
+
+        analyzer = analysis_class(window_length_for_welch=4)
+        freqs, psd = analyzer(signal)
+
+        assert freqs.max() == rate / 2
