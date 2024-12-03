@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple
+from typing import Optional
 
 import os
 from dataclasses import dataclass
@@ -11,6 +11,7 @@ from scipy.integrate import simpson
 from miv.core.operator_generator.operator import GeneratorOperatorMixin
 from miv.core.operator_generator.wrapper import cache_generator_call
 
+
 @dataclass
 class PowerSpectrumAnalysis(GeneratorOperatorMixin):
     """
@@ -22,6 +23,7 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
     band_list : list
         Frequency bands to analyze, default is [[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]], i.e. the five common frequency bands.
     """
+
     band_display: tuple[float, float] = (0, 100)
     band_list: tuple[tuple[float, float], ...] = (
         (0.5, 4),
@@ -34,12 +36,10 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
 
     def __post_init__(self) -> None:
         super().__init__()
-        self.chunk = -1
+        self.chunk: int = -1
 
     @cache_generator_call
-    def __call__(
-        self, input
-    ):
+    def __call__(self, input: tuple) -> tuple:
         """
         Perform the periodogram analysis on the given signal.
 
@@ -60,15 +60,16 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
         self.chunk += 1
         self.num_channel = psd.shape[1]
 
-        psd_idx, power, rel_power = self.computing_absolute_and_relative_power(freqs, psd)
+        psd_idx, power, rel_power = self.computing_absolute_and_relative_power(
+            freqs, psd
+        )
         self.computing_ratio_and_bandpower(power, rel_power)
 
         return freqs, psd, psd_idx
 
-
     def computing_absolute_and_relative_power(
-        self, freqs, psd
-    ):
+        self, freqs: np.ndarray, psd: np.ndarray
+    ) -> tuple:
         """
         Compute absolute and relative power for different frequency bands.
 
@@ -82,9 +83,9 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
         power_dict
             Dictionary containing power values.
         """
-        psd_idx_list = []
-        power_list = []
-        rel_power_list = []
+        psd_idx_list: list = []
+        power_list: list = []
+        rel_power_list: list = []
 
         freq_res = freqs[1] - freqs[0]
 
@@ -100,11 +101,14 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
                 power_list.append(power)
                 rel_power_list.append(rel_power)
 
-        return np.array(psd_idx_list).T, np.array(power_list).T, np.array(rel_power_list).T
-
+        return (
+            np.array(psd_idx_list).T,
+            np.array(power_list).T,
+            np.array(rel_power_list).T,
+        )
 
     def computing_ratio_and_bandpower(
-        self, power, rel_power
+        self, power: np.ndarray, rel_power: np.ndarray
     ) -> None:
         """
         Compute power ratios and band powers for specific bands.
@@ -117,10 +121,14 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
             Dictionary containing power values of each channel in this chunk.
         """
         absolute_powers = power[
-            (self.chunk * len(self.band_list)) : ((self.chunk + 1) * len(self.band_list))
+            (self.chunk * len(self.band_list)) : (
+                (self.chunk + 1) * len(self.band_list)
+            )
         ]
         relative_powers = rel_power[
-            (self.chunk * len(self.band_list)) : ((self.chunk + 1) * len(self.band_list))
+            (self.chunk * len(self.band_list)) : (
+                (self.chunk + 1) * len(self.band_list)
+            )
         ]
 
         for channel in range(self.num_channel):
@@ -135,7 +143,6 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
                 self.logger.info(
                     f"{band}: Relative power of channel {channel} is: {rel_power:.3f} uV^2\n\n"
                 )
-
 
     def plot_periodogram(
         self,
@@ -216,5 +223,4 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
                         f"periodogram_{self.chunk:03d}.png",
                     )
                     plt.savefig(plot_path, dpi=300)
-                plt.close('all')
-
+                plt.close("all")

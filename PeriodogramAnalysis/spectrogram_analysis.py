@@ -35,7 +35,7 @@ class SpectrogramAnalysis(GeneratorOperatorMixin):
 
     def __post_init__(self) -> None:
         super().__init__()
-        self.chunk = -1
+        self.chunk: int = -1
 
     @cache_generator_call
     def __call__(self, signal: Signal):
@@ -58,15 +58,12 @@ class SpectrogramAnalysis(GeneratorOperatorMixin):
 
         return self.computing_spectrum(signal.data)
 
-
-    def computing_spectrum(
-        self, data
-    ):
+    def computing_spectrum(self, data: np.ndarray) -> tuple:
 
         nperseg = int(self.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
 
-        sxx_list = []
+        sxx_list: list = []
 
         for ch in range(self.num_channel):
             signal_no_bias = data[:, ch] - np.mean(data[:, ch])
@@ -80,7 +77,7 @@ class SpectrogramAnalysis(GeneratorOperatorMixin):
 
     def plot_spectrogram(
         self,
-        output: dict,
+        output: tuple,
         input: None,
         show: bool = False,
         save_path: Optional[pathlib.Path] = None,
