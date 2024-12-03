@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 import scipy
 from collections import defaultdict
 
-from miv.core.operator.operator import OperatorMixin
-from miv.core.operator.wrapper import cache_call
+from miv.core.operator_generator.operator import GeneratorOperatorMixin
+from miv.core.operator_generator.wrapper import cache_generator_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
 
 
 @dataclass
-class SpectrogramAnalysis(OperatorMixin):
+class SpectrogramAnalysis(GeneratorOperatorMixin):
     """
     A class to perform Spectrum Analysis using multiple methods including Welch's, Periodogram, and multitaper PSD.
 
@@ -35,9 +35,10 @@ class SpectrogramAnalysis(OperatorMixin):
 
     def __post_init__(self) -> None:
         super().__init__()
+        self.chunk = -1
 
-    @cache_call
-    def __call__(self, signal: SignalType) -> dict[int, dict[str, Any]]:
+    @cache_generator_call
+    def __call__(self, signal: Signal):
         """
         Perform spectrum analysis on the given signal.
 
@@ -51,33 +52,31 @@ class SpectrogramAnalysis(OperatorMixin):
         spec_dict
             spectrum dictionary
         """
-        spec_dict: dict[int, dict[str, Any]] = defaultdict(dict)
+        self.rate = signal.rate
+        self.num_channel = signal.number_of_channels
+        self.chunk += 1
 
-        for chunk_index, signal_piece in enumerate(signal):
-            spec_dict = self.computing_spectrum(signal_piece, spec_dict)
+        return self.computing_spectrum(signal.data)
 
-        return spec_dict
 
     def computing_spectrum(
-        self, signal: Signal, spec_dict: dict[int, dict[str, Any]]
-    ) -> dict[int, dict[str, Any]]:
+        self, data
+    ):
 
-        nperseg = int(signal.rate * self.nperseg_ratio)
+        nperseg = int(self.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
-        channel_signal: np.ndarray
 
-        for channel_index in range(signal.number_of_channels):
-            signal_no_bias = signal[channel_index] - np.mean(signal[channel_index])
+        sxx_list = []
+
+        for ch in range(self.num_channel):
+            signal_no_bias = data[:, ch] - np.mean(data[:, ch])
             frequencies, times, sxx = scipy.signal.spectrogram(
-                signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap
+                signal_no_bias, fs=self.rate, nperseg=nperseg, noverlap=noverlap
             )
-            if channel_index not in spec_dict:
-                spec_dict[channel_index] = {"frequencies": [], "times": [], "Sxx": []}
-            spec_dict[channel_index]["frequencies"].append(frequencies)
-            spec_dict[channel_index]["times"].append(times)
-            spec_dict[channel_index]["Sxx"].append(sxx)
 
-        return spec_dict
+            sxx_list.append(sxx)
+
+        return frequencies, times, np.array(sxx_list)
 
     def plot_spectrogram(
         self,
@@ -98,19 +97,14 @@ class SpectrogramAnalysis(OperatorMixin):
         save_path : str, optional (default=None)
             If provided, the spectrogram plot will be saved to the given path with filenames indicating the chunk and channel.
         """
-        spec_dict = output
-
-        for channel in spec_dict.keys():
-            for chunk in range(len(spec_dict[channel]["frequencies"])):
+        for frequencies, times, sxx in output:
+            for channel in range(self.num_channel):
                 if save_path is not None:
                     channel_folder = os.path.join(save_path, f"channel{channel:03d}")
                     os.makedirs(channel_folder, exist_ok=True)
 
-                frequencies = spec_dict[channel]["frequencies"][chunk]
-                times = spec_dict[channel]["times"][chunk]
-                sxx = spec_dict[channel]["Sxx"][chunk]
-                sxx = np.maximum(sxx, 1e-2)
-                sxx_log = 10 * np.log10(sxx)
+                sxx_channel = np.maximum(sxx[channel, :, :], 1e-2)
+                sxx_log = 10 * np.log10(sxx_channel)
 
                 fig, ax = plt.subplots(2, 1, figsize=(14, 12))
 
@@ -167,7 +161,7 @@ class SpectrogramAnalysis(OperatorMixin):
                     plt.show()
                 if save_path is not None:
                     plot_path = os.path.join(
-                        channel_folder, f"spectrogram_{chunk:03d}.png"
+                        channel_folder, f"spectrogram_{self.chunk:03d}.png"
                     )
                     plt.savefig(plot_path, dpi=300)
                 plt.close("all")

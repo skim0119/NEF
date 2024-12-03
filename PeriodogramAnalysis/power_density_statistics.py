@@ -1,22 +1,18 @@
 from typing import Any, Optional
 
-import os
 from dataclasses import dataclass
 
-import pathlib
 import scipy
 import numpy as np
-import matplotlib.pyplot as plt
-from collections import defaultdict
 
-from miv.core.operator.operator import OperatorMixin
-from miv.core.operator.wrapper import cache_call
+from miv.core.operator_generator.operator import GeneratorOperatorMixin
+from miv.core.operator_generator.wrapper import cache_generator_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
 
 
 @dataclass
-class SpectrumAnalysisBase(OperatorMixin):
+class SpectrumAnalysisBase(GeneratorOperatorMixin):
     """
     A base class for performing spectral analysis on signal data.
 
@@ -31,14 +27,14 @@ class SpectrumAnalysisBase(OperatorMixin):
     """
 
     window_length_for_welch: int = 4
-    band_display: tuple[float, float] = (0, 100)
     tag: str = "Base PSD spectrum analysis"
 
     def __post_init__(self) -> None:
         super().__init__()
+        self.chunk = 0
 
-    @cache_call
-    def __call__(self, signal: SignalType) -> dict[int, dict[str, Any]]:
+    @cache_generator_call
+    def __call__(self, signal: Signal):
         """
         Compute the Power Spectral Density (PSD) for each chunk of the given signal.
 
@@ -55,15 +51,17 @@ class SpectrumAnalysisBase(OperatorMixin):
             - "freqs": A NumPy array of frequency values in Hz.
             - "psd": A NumPy array of PSD values.
         """
+        self.rate = signal.rate
+        self.num_channel = signal.number_of_channels
 
-        psd_dict: dict[int, dict[str, Any]] = defaultdict(dict)
-        for chunk_idx, signal_piece in enumerate(signal):
-            psd_dict = self.compute_psd(signal_piece, psd_dict)
-        return psd_dict
+        freqs, psd = self.compute_psd(signal.data)
+
+        return freqs, psd
+
+
 
     def compute_psd(
-        self, signal: Signal, psd_dict: dict[int, dict[str, Any]]
-    ) -> dict[int, dict[str, Any]]:
+        self, data):
         """
         compute_psd(signal: Signal) -> Dict[int, Dict[str, Any]]:
         Abstract method to be overridden in subclasses to compute the PSD for a given signal.
@@ -74,53 +72,6 @@ class SpectrumAnalysisBase(OperatorMixin):
             "such as SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram, or SpectrumAnalysisMultitaper."
         )
 
-    def plot_spectrum(
-        self,
-        output: dict,
-        input: None,
-        show: bool = False,
-        save_path: Optional[pathlib.Path] = None,
-    ) -> None:
-        """
-        Plots the PSD of the given signal output and optionally saves the plot to a specified path.
-
-        Parameters
-        ----------
-        output : dict
-            The output from the `__call__` method containing PSD data.
-        show : bool, optional
-            If True, displays the plot. Default is False.
-        save_path : Optional[pathlib.Path], optional
-            The path to save the plot. If None, the plot is not saved. Default is None.
-        """
-        psd_dict = output
-        for channel in psd_dict.keys():
-            for chunk in range(len(psd_dict[channel]["freqs"])):
-                if save_path is not None:
-                    channel_folder = os.path.join(save_path, f"channel{channel:03d}")
-                    os.makedirs(channel_folder, exist_ok=True)
-
-                plt.plot(
-                    psd_dict[channel]["freqs"][chunk],
-                    psd_dict[channel]["psd"][chunk],
-                    lw=1,
-                    color="k",
-                )
-                plt.xlabel("Frequency (Hz)")
-                plt.ylabel("Power/Frequency (dB/Hz)")
-                plt.title(self.tag)
-                plt.xlim(self.band_display)
-                plt.ylim(ymin=0)
-
-                if show:
-                    plt.show()
-                if save_path is not None:
-                    plot_path = os.path.join(
-                        channel_folder, f"power_density_{chunk:03d}.png"
-                    )
-                    plt.savefig(plot_path, dpi=300)
-                plt.close("all")
-
 
 @dataclass
 class SpectrumAnalysisWelch(SpectrumAnalysisBase):
@@ -130,23 +81,18 @@ class SpectrumAnalysisWelch(SpectrumAnalysisBase):
 
     tag: str = "Welch PSD spectrum analysis"
 
-    def compute_psd(
-        self, signal: Signal, psd_welch_dict: dict[int, dict[str, Any]]
-    ) -> dict[int, dict[str, Any]]:
-
-        win = self.window_length_for_welch * signal.rate
-        channel_signal: np.ndarray
-
-        for channel_index in range(signal.number_of_channels):
-            signal_no_bias = signal[channel_index] - np.mean(signal[channel_index])
-            freqs, psd = scipy.signal.welch(
-                signal_no_bias, fs=signal.rate, nperseg=win, nfft=4 * win
+    def compute_psd(self, data):
+        win = self.window_length_for_welch * self.rate
+        psd_list = []
+        for ch in range(self.num_channel):
+            signal_no_bias = data[:, ch] - np.mean(data[:, ch])
+            freqs, psd_channel = scipy.signal.welch(
+                signal_no_bias, fs=self.rate, nperseg=win, nfft=4 * win
             )
-            if channel_index not in psd_welch_dict:
-                psd_welch_dict[channel_index] = {"freqs": [], "psd": []}
-            psd_welch_dict[channel_index]["freqs"].append(freqs)
-            psd_welch_dict[channel_index]["psd"].append(psd)
-        return psd_welch_dict
+            psd_list.append(psd_channel)
+        psd_list = np.array(psd_list).T
+
+        return freqs, psd_list
 
 
 @dataclass
@@ -158,18 +104,14 @@ class SpectrumAnalysisPeriodogram(SpectrumAnalysisBase):
     tag: str = "Periodogram PSD spectrum analysis"
 
     def compute_psd(
-        self, signal: Signal, psd_periodogram_dict: dict[int, dict[str, Any]]
-    ) -> dict[int, dict[str, Any]]:
+        self, data
+    ):
+        psd_list = []
 
-        channel_signal: np.ndarray
+        for ch in range(self.num_channel):
+            signal_no_bias = data[:, ch] - np.mean(data[:, ch])
+            freqs, psd_channel = scipy.signal.periodogram(signal_no_bias, self.rate)
+            psd_list.append(psd_channel)
+        psd_list = np.array(psd_list).T
 
-        for channel_index in range(signal.number_of_channels):
-            signal_no_bias = signal[channel_index] - np.mean(signal[channel_index])
-            freqs, psd = scipy.signal.periodogram(signal_no_bias, signal.rate)
-
-            if channel_index not in psd_periodogram_dict:
-                psd_periodogram_dict[channel_index] = {"freqs": [], "psd": []}
-            psd_periodogram_dict[channel_index]["freqs"].append(freqs)
-            psd_periodogram_dict[channel_index]["psd"].append(psd)
-
-        return psd_periodogram_dict
+        return freqs, psd_list
