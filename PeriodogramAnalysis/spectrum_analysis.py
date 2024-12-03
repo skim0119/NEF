@@ -53,7 +53,7 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
             if not (low >= 0 and low < high):
                 raise ValueError(f"Band {band} must satisfy 0 <= low < high.")
 
-        self.num_channel: Optional[int] = None
+        self.num_channel: int = 0
         self.chunk: int = -1
 
     @cache_generator_call
