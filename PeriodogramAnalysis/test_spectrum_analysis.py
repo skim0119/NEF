@@ -1,155 +1,93 @@
 from typing import Any, Optional, Tuple
 
+import pytest
 import numpy as np
 from spectrum_analysis import PowerSpectrumAnalysis
 from scipy.integrate import simpson
 
 
 def psd_input() -> dict[int, dict[str, Any]]:
-    psd_dict = {
-        0: {  # channel index
-            "freqs": [
-                np.array([1, 2, 3, 4, 5, 7, 9, 10, 15, 25, 35, 50]),  # chunk 0
-                np.array([1, 2, 3, 4, 5, 7, 9, 10, 15, 25, 35, 50]),  # chunk 1
-            ],
-            "psd": [
-                np.array(
-                    [0.1, 0.2, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85]
-                ),  # chunk 0
-                np.array(
-                    [
-                        0.2,
-                        0.25,
-                        0.3,
-                        0.35,
-                        0.4,
-                        0.425,
-                        0.45,
-                        0.475,
-                        0.5,
-                        0.525,
-                        0.55,
-                        0.575,
-                    ]
-                ),  # chunk 1
-            ],
-        },
-        1: {  # channel index
-            "freqs": [
-                np.array([1, 2, 3, 4, 5, 7, 9, 10, 15, 25, 35, 50]),  # chunk 0
-                np.array([1, 2, 3, 4, 5, 7, 9, 10, 15, 25, 35, 50]),  # chunk 1
-            ],
-            "psd": [
-                np.array(
-                    [0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3]
-                ),  # chunk 0
-                np.array(
-                    [
-                        0.575,
-                        0.55,
-                        0.525,
-                        0.5,
-                        0.475,
-                        0.45,
-                        0.425,
-                        0.4,
-                        0.35,
-                        0.3,
-                        0.25,
-                        0.2,
-                    ]
-                ),  # chunk 1
-            ],
-        },
-    }
+    freqs = np.array([1, 2, 3, 4, 5, 7, 9, 10, 15, 25, 35, 50])
+    psd = np.array(
+        [
+            [0.1, 0.2, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85],
+            [0.2, 0.25, 0.3, 0.35, 0.4, 0.425, 0.45, 0.475, 0.5, 0.525, 0.55, 0.575],
+        ]
+    ).T
 
-    return psd_dict
+    output = (freqs, psd)
+
+    return output
 
 
-def test_power_spectrum_analysis_call() -> None:
-    """
-    Test PowerSpectrumAnalysis class is retuning proper dicts, first see if the returned psd_dict is the same
-    as the input psd_dict, and second test if power_dict has proper shape and content.
+def test_call_invalid_input_parameters():
+    with pytest.raises(ValueError):
+        PowerSpectrumAnalysis(band_display=(5, 10, 20, 30))
+    with pytest.raises(ValueError):
+        PowerSpectrumAnalysis(band_display=(-2, 5))
 
-    I think if it fails, it means the formation of dicts are wrong. But it might not because of call itself, but other functions.
-    """
-    psd_dict = psd_input()
+    with pytest.raises(ValueError):
+        PowerSpectrumAnalysis(band_display=((8, 5)))
+    with pytest.raises(ValueError):
+        PowerSpectrumAnalysis(band_display=((-3, 5)))
+    with pytest.raises(ValueError):
+        PowerSpectrumAnalysis(band_display=((8), (12, 30), (30, 100)))
+
+
+def test_call_return_shape():
+    analyzer = PowerSpectrumAnalysis()
+    result = analyzer(psd_input())
+    freqs, psd, psd_idx = result
+
+    assert isinstance(freqs, np.ndarray)
+    assert isinstance(psd, np.ndarray)
+    assert freqs.shape[0] == 12
+    assert psd.shape[0] == 12
+    assert psd_idx.shape == (12, 10)
+
+
+def test_computing_absolute_and_relative_power(mocker) -> None:
     analysis = PowerSpectrumAnalysis()
+    result = analysis(psd_input())
+    freqs, psd, psd_idx = result
 
-    psd_dict, power_dict = analysis(psd_dict)
-    assert psd_dict == psd_dict
+    power_analysis = PowerSpectrumAnalysis()
+    mocker.patch.object(power_analysis, "num_channel", 2)
 
-    # Test the content of power_dict
-    for channel, channel_data in power_dict.items():
-        assert "psd_idx" in channel_data
-        assert "power_list" in channel_data
-        assert "rel_power_list" in channel_data
-
-        assert len(power_dict[channel]["psd_idx"]) == 10
-        assert len(power_dict[channel]["power_list"]) == 10
-        assert len(power_dict[channel]["rel_power_list"]) == 10
-
-        for power in power_dict[channel]["power_list"]:
-            assert power >= 0
-        for rel_power in power_dict[channel]["rel_power_list"]:
-            assert rel_power >= 0
-            assert rel_power <= 1
-
-
-def test_computing_absolute_and_relative_power() -> None:
-    """
-    Test if the returned data is the same as official "simpson" result.
-    If this test fails, but the previous passes, I think it is still the reason of this function.
-    """
-
-    power_analysis = PowerSpectrumAnalysis(
-        band_list=((1, 5), (5, 15), (15, 35), (35, 50))
+    psd_idx, power, rel_power = power_analysis.computing_absolute_and_relative_power(
+        freqs, psd
     )
 
-    psd_dict = psd_input()
-    power_dict: dict[str, Any] = {
-        "psd_idx": [],
-        "power_list": [],
-        "rel_power_list": [],
-    }
+    for ch in range(2):
+        psd_channel = psd[:, ch]
+        freq_res = freqs[1] - freqs[0]
+        total_power = simpson(psd_channel, dx=freq_res)
 
-    result_power_dict = power_analysis.computing_absolute_and_relative_power(
-        psd_dict[0], power_dict
-    )
+        for i, band in enumerate(power_analysis.band_list):
+            psd_idx = np.logical_and(freqs >= band[0], freqs <= band[1])
+            manual_power = simpson(psd_channel[psd_idx], dx=freq_res)
+            computed_power = power[ch * 5 + i]
+            computed_rel_power = rel_power[ch * 5 + i]
 
-    freqs = psd_dict[0]["freqs"][0]
-    psd = psd_dict[0]["psd"][0]
-    freq_res = freqs[1] - freqs[0]
-    total_power = simpson(psd, dx=freq_res)
+            assert np.isclose(manual_power, computed_power)
 
-    for i, band in enumerate(power_analysis.band_list):
-        psd_idx = np.logical_and(freqs >= band[0], freqs <= band[1])
-        manual_power = simpson(psd[psd_idx], dx=freq_res)
-        computed_power = result_power_dict["power_list"][i]
-        computed_rel_power = result_power_dict["rel_power_list"][i]
-
-        assert np.isclose(manual_power, computed_power)
-
-        manual_rel_power = manual_power / total_power
-        assert np.isclose(manual_rel_power, computed_rel_power)
+            manual_rel_power = manual_power / total_power
+            assert np.isclose(manual_rel_power, computed_rel_power)
 
 
 def test_computing_ratio_and_bandpower(mocker) -> None:
-    """
-    This is just used to check if enough data is collected, if
-    it fails, I think the dicts may not be split properly.
+    power = np.array([1, 2, 3, 4, 5])
+    rel_power = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
 
-    this test can be further extended to numerical test.
-    """
-    channel_idx = 0
-    analysis = PowerSpectrumAnalysis()
-    psd_dict = psd_input()
-    psd_dict, power_dict = analysis(psd_dict)
-
-    logger_info_spy = mocker.spy(analysis.logger, "info")
-    analysis.computing_ratio_and_bandpower(
-        psd_dict[channel_idx], power_dict[channel_idx], channel_idx
+    power_analysis = PowerSpectrumAnalysis()
+    mocker.patch.object(power_analysis, "num_channel", 2)
+    mocker.patch.object(power_analysis, "chunk", 0)
+    mocker.patch.object(
+        power_analysis, "band_list", ((0.5, 4), (4, 8), (8, 12), (12, 30), (30, 100))
     )
 
-    # Test how many times logger is called
-    assert logger_info_spy.call_count == 11 * 2
+    result = power_analysis.computing_ratio_and_bandpower(power, rel_power)
+    absolute_powers, relative_powers = result
+
+    np.testing.assert_allclose(absolute_powers, power)
+    np.testing.assert_allclose(relative_powers, rel_power)

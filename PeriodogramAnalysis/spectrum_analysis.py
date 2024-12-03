@@ -36,6 +36,24 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
 
     def __post_init__(self) -> None:
         super().__init__()
+        if not len(self.band_display) == 2:
+            raise ValueError("band_display must be a tuple with two values.")
+        if not (
+            self.band_display[0] >= 0 and self.band_display[1] > self.band_display[0]
+        ):
+            raise ValueError(
+                "band_display must contain two non-negative values, where band_display[0] < band_display[1]."
+            )
+        for band in self.band_list:
+            if not (isinstance(band, tuple) and len(band) == 2):
+                raise ValueError(
+                    "Each band in band_list must be a tuple with two values."
+                )
+            low, high = band
+            if not (low >= 0 and low < high):
+                raise ValueError(f"Band {band} must satisfy 0 <= low < high.")
+
+        self.num_channel: Optional[int] = None
         self.chunk: int = -1
 
     @cache_generator_call
@@ -109,7 +127,7 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
 
     def computing_ratio_and_bandpower(
         self, power: np.ndarray, rel_power: np.ndarray
-    ) -> None:
+    ) -> tuple:
         """
         Compute power ratios and band powers for specific bands.
 
@@ -143,6 +161,7 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
                 self.logger.info(
                     f"{band}: Relative power of channel {channel} is: {rel_power:.3f} uV^2\n\n"
                 )
+        return absolute_powers, relative_powers
 
     def plot_periodogram(
         self,

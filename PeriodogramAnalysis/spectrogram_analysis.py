@@ -35,6 +35,26 @@ class SpectrogramAnalysis(GeneratorOperatorMixin):
 
     def __post_init__(self) -> None:
         super().__init__()
+        if not len(self.frequency_limit) == 2:
+            raise ValueError("frequency_limit must be a tuple with two values.")
+        if self.frequency_limit[0] >= self.frequency_limit[1]:
+            raise ValueError("frequency_limit[0] must be less than frequency_limit[1].")
+
+        if not len(self.plotting_interval) == 2:
+            raise ValueError("plotting_interval must be a tuple with two values.")
+        if self.plotting_interval[0] < 0 or self.plotting_interval[1] > 60:
+            raise ValueError(
+                "plotting_interval values must be within the range [0, 60]."
+            )
+        if self.plotting_interval[0] >= self.plotting_interval[1]:
+            raise ValueError(
+                "plotting_interval[0] must be less than plotting_interval[1]."
+            )
+
+        if not self.nperseg_ratio > 0:
+            raise ValueError("nperseg_ratio must be a positive number.")
+
+        self.num_channel: Optional[int] = None
         self.chunk: int = -1
 
     @cache_generator_call
