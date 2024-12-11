@@ -1,5 +1,6 @@
 from typing import Generator, Any
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from miv.core.datatype import Signal
@@ -10,6 +11,7 @@ from power_density_statistics import (
 )
 
 
+@pytest.fixture
 def mock_signal_generator():
     timestamps = np.linspace(0, 10, 1000, endpoint=False)
     signal = (
@@ -18,16 +20,19 @@ def mock_signal_generator():
         + np.sin(2 * np.pi * 15 * timestamps)
         + np.sin(2 * np.pi * 20 * timestamps)
     )
-
-    data1 = np.array([signal, signal]).T
+    noise = np.random.normal(loc=0, scale=0.5, size=signal.shape)
+    signal += noise
+    data1 = np.array([signal, 2 * signal]).T
     signal = Signal(data=data1, timestamps=timestamps, rate=100)
-    return signal
+    expected_freqs = [5, 10, 15, 20]
+    return signal, expected_freqs
 
 
-def test_call_invalid_input_parameters():
+def test_call_invalid_input_parameters(mock_signal_generator):
+    signal, _ = mock_signal_generator
     with pytest.raises(NotImplementedError):
         analyzer = SpectrumAnalysisBase(window_length_for_welch=4)
-        analyzer(mock_signal_generator())
+        analyzer(signal)
 
     with pytest.raises(ValueError):
         SpectrumAnalysisWelch(window_length_for_welch=-1)
@@ -36,9 +41,10 @@ def test_call_invalid_input_parameters():
         SpectrumAnalysisWelch(window_length_for_welch=0.75)
 
 
-def test_call_return_shape():
+def test_call_return_shape(mock_signal_generator):
     analyzer = SpectrumAnalysisWelch(window_length_for_welch=4)
-    result = analyzer(mock_signal_generator())
+    signal, _ = mock_signal_generator
+    result = analyzer(signal)
     freqs, psd = result
 
     assert isinstance(result, tuple)
@@ -53,19 +59,19 @@ def test_call_return_shape():
     "analysis_class",
     [SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram],
 )
-def test_spectrum_analysis_computation(analysis_class) -> None:
+def test_spectrum_analysis_computation(analysis_class, mock_signal_generator) -> None:
     analysis = analysis_class()
-    freqs, psd = analysis(mock_signal_generator())
+    signal, expected_freqs = mock_signal_generator
+    freqs, psd = analysis(signal)
 
     for channel in range(2):
         psd_channel = psd[:, channel]
         total_psd_sum = np.sum(psd_channel)
-        expected_freqs = [5, 10, 15, 20]
 
         range_psd_sum = 0
         for exp_freq in expected_freqs:
             range_psd_sum += np.sum(
-                psd[(freqs >= exp_freq - 1) & (freqs <= exp_freq + 1)]
+                psd[(freqs >= exp_freq - 0.5) & (freqs <= exp_freq + 0.5)]
             )
             idx = np.argmin(np.abs(freqs - exp_freq))
             spike_psd = psd[idx, channel]
@@ -75,22 +81,28 @@ def test_spectrum_analysis_computation(analysis_class) -> None:
         assert range_psd_sum / total_psd_sum >= 0.9
 
         for i, freq in enumerate(freqs):
-            if all(abs(freq - exp_freq) > 1 for exp_freq in expected_freqs):
+            if all(abs(freq - exp_freq) > 0.5 for exp_freq in expected_freqs):
                 assert psd[i, channel] < 0.05 * spike_psd
 
 
 @pytest.mark.parametrize(
-    "analysis_class",
-    [SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram],
+    "analysis_class, rate",
+    [
+        (SpectrumAnalysisWelch, 50),
+        (SpectrumAnalysisWelch, 200),
+        (SpectrumAnalysisWelch, 500),
+        (SpectrumAnalysisPeriodogram, 50),
+        (SpectrumAnalysisPeriodogram, 200),
+        (SpectrumAnalysisPeriodogram, 500),
+    ],
 )
-def test_different_sampling_rates(analysis_class):
-    for rate in [50, 200, 500]:
-        timestamps = np.linspace(0, 10, rate * 10, endpoint=False)
-        signal_data = np.sin(2 * np.pi * 5 * timestamps)
-        data = np.array([signal_data, signal_data]).T
-        signal = Signal(data=data, timestamps=timestamps, rate=rate)
+def test_different_sampling_rates(analysis_class, rate):
+    timestamps = np.linspace(0, 10, rate * 10, endpoint=False)
+    signal_data = np.sin(2 * np.pi * 5 * timestamps)
+    data = np.array([signal_data, signal_data]).T
+    signal = Signal(data=data, timestamps=timestamps, rate=rate)
 
-        analyzer = analysis_class(window_length_for_welch=4)
-        freqs, psd = analyzer(signal)
+    analyzer = analysis_class(window_length_for_welch=4)
+    freqs, psd = analyzer(signal)
 
-        assert freqs.max() == rate / 2
+    assert freqs.max() == rate / 2

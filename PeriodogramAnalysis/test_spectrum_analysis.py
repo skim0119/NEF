@@ -6,7 +6,8 @@ from spectrum_analysis import PowerSpectrumAnalysis
 from scipy.integrate import simpson
 
 
-def psd_input() -> dict[int, dict[str, Any]]:
+@pytest.fixture()
+def psd_input() -> tuple:
     freqs = np.array([1, 2, 3, 4, 5, 7, 9, 10, 15, 25, 35, 50])
     psd = np.array(
         [
@@ -34,9 +35,9 @@ def test_call_invalid_input_parameters():
         PowerSpectrumAnalysis(band_display=((8), (12, 30), (30, 100)))
 
 
-def test_call_return_shape():
+def test_call_return_shape(psd_input):
     analyzer = PowerSpectrumAnalysis()
-    result = analyzer(psd_input())
+    result = analyzer(psd_input)
     freqs, psd, psd_idx = result
 
     assert isinstance(freqs, np.ndarray)
@@ -46,33 +47,46 @@ def test_call_return_shape():
     assert psd_idx.shape == (12, 10)
 
 
-def test_computing_absolute_and_relative_power(mocker) -> None:
+def test_computing_absolute_and_relative_power_single_channel(
+    mocker, psd_input
+) -> None:
     analysis = PowerSpectrumAnalysis()
-    result = analysis(psd_input())
+    result = analysis(psd_input)
     freqs, psd, psd_idx = result
 
-    power_analysis = PowerSpectrumAnalysis()
-    mocker.patch.object(power_analysis, "num_channel", 2)
-
-    psd_idx, power, rel_power = power_analysis.computing_absolute_and_relative_power(
+    mocker.patch.object(analysis, "num_channel", 1)
+    psd_idx, power, rel_power = analysis.computing_absolute_and_relative_power(
         freqs, psd
     )
 
-    for ch in range(2):
-        psd_channel = psd[:, ch]
-        freq_res = freqs[1] - freqs[0]
-        total_power = simpson(psd_channel, dx=freq_res)
+    psd_channel = psd[:, 0]
+    freq_res = freqs[1] - freqs[0]
+    total_power = simpson(psd_channel, dx=freq_res)
 
-        for i, band in enumerate(power_analysis.band_list):
-            psd_idx = np.logical_and(freqs >= band[0], freqs <= band[1])
-            manual_power = simpson(psd_channel[psd_idx], dx=freq_res)
-            computed_power = power[ch * 5 + i]
-            computed_rel_power = rel_power[ch * 5 + i]
+    for i, band in enumerate(analysis.band_list):
+        psd_idx = np.logical_and(freqs >= band[0], freqs <= band[1])
+        manual_power = simpson(psd_channel[psd_idx], dx=freq_res)
+        computed_power = power[i]
+        computed_rel_power = rel_power[i]
 
-            assert np.isclose(manual_power, computed_power)
+        assert np.isclose(manual_power, computed_power)
 
-            manual_rel_power = manual_power / total_power
-            assert np.isclose(manual_rel_power, computed_rel_power)
+        manual_rel_power = manual_power / total_power
+        assert np.isclose(manual_rel_power, computed_rel_power)
+
+
+def test_computing_absolute_and_relative_power_multi_channel(mocker, psd_input) -> None:
+    analysis = PowerSpectrumAnalysis()
+    result = analysis(psd_input)
+    freqs, psd, psd_idx = result
+
+    mocker.patch.object(analysis, "num_channel", 2)
+    psd_idx, power, rel_power = analysis.computing_absolute_and_relative_power(
+        freqs, psd
+    )
+
+    assert power.shape == (10,)
+    assert rel_power.shape == (10,)
 
 
 def test_computing_ratio_and_bandpower(mocker) -> None:
