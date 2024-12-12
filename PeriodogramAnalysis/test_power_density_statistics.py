@@ -8,26 +8,8 @@ from power_density_statistics import (
 )
 
 
-def generate_signal(num_channel):
-    expected_freqs = [5, 10, 15, 20]
-    timestamps = np.linspace(0, 10, 1000, endpoint=False)
-    signal = (
-            np.sin(2 * np.pi * 5 * timestamps)
-            + np.sin(2 * np.pi * 10 * timestamps)
-            + np.sin(2 * np.pi * 15 * timestamps)
-            + np.sin(2 * np.pi * 20 * timestamps)
-    )
-    np.random.seed(42)
-    noise = np.random.normal(loc=0, scale=0.5, size=signal.shape)
-    signal += noise
-    data = np.empty((0, len(signal)))
-    for ch in range(num_channel):
-        data = np.vstack((data, (ch + 2) * signal))
-    signal = Signal(data=data.T, timestamps=timestamps, rate=100)
-    return signal, expected_freqs
-
 @pytest.fixture
-def initialize_module():
+def initialize_module(generate_signal):
     def module_init(module_name, num_channel):
         analyzer = module_name(window_size_for_welch=4)
         signal, expected_freqs = generate_signal(num_channel=num_channel)
@@ -75,6 +57,7 @@ Signal length = nfft = 1000
 Length of freqs = nfft / 2 + 1 = 501
 More details is here: <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html>
 """
+
 
 @pytest.mark.parametrize(
     "analysis_class_and_shape",

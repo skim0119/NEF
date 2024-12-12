@@ -2,13 +2,11 @@ from typing import Generator, Any
 
 import pytest
 import numpy as np
-from scipy.signal import spectrogram
-from miv.core.datatype import Signal
 from spectrogram_analysis import SpectrogramAnalysis
-from test_power_density_statistics import generate_signal
+
 
 @pytest.fixture
-def initialize_spectrogram():
+def initialize_spectrogram(generate_signal):
     def module_init(num_channel):
         analyzer = SpectrogramAnalysis()
         signal, expected_freqs = generate_signal(num_channel=num_channel)
@@ -17,6 +15,7 @@ def initialize_spectrogram():
         return frequencies, times, sxx_list, expected_freqs, signal
 
     return module_init
+
 
 def test_call_invalid_input_parameters():
     # Test improper input parameter
@@ -45,9 +44,11 @@ def test_none_input():
         analyzer(None)
 
 
-def test_call_first_channel(initialize_spectrogram, num_channel = 1):
+def test_call_first_channel(initialize_spectrogram, num_channel=1):
     # Test shape of output for a single channel signal
-    frequencies, times, sxx_list, *rest = initialize_spectrogram(num_channel=num_channel)
+    frequencies, times, sxx_list, *rest = initialize_spectrogram(
+        num_channel=num_channel
+    )
     """
     nperseg_ratio = 0.25.
     nperseg = int(100 * 0.25) = 25 points per segment.
@@ -64,10 +65,12 @@ def test_call_first_channel(initialize_spectrogram, num_channel = 1):
     assert sxx_list.shape == (1, frequencies.shape[0], times.shape[0])
 
 
-@pytest.mark.parametrize("num_channel",[2, 4, 6, 8])
+@pytest.mark.parametrize("num_channel", [2, 4, 6, 8])
 def test_call_multiple_channel(initialize_spectrogram, num_channel):
     # Test shape of output for a multiple channel signal
-    frequencies, times, sxx_list, *rest = initialize_spectrogram(num_channel=num_channel)
+    frequencies, times, sxx_list, *rest = initialize_spectrogram(
+        num_channel=num_channel
+    )
     assert sxx_list.shape == (num_channel, frequencies.shape[0], times.shape[0])
 
 
@@ -83,8 +86,10 @@ def mock_spectrogram(mocker):
     return mock
 
 
-@pytest.mark.parametrize("num_channel",[1, 2, 4, 6, 8])
-def test_computing_spectrum_computed_signal(mock_spectrogram, num_channel) -> None:
+@pytest.mark.parametrize("num_channel", [1, 2, 4, 6, 8])
+def test_computing_spectrum_computed_signal(
+    mock_spectrogram, num_channel, generate_signal
+) -> None:
     analyzer = SpectrogramAnalysis()
     signal, expected_freqs = generate_signal(num_channel=num_channel)
 
@@ -99,8 +104,8 @@ def test_computing_spectrum_computed_signal(mock_spectrogram, num_channel) -> No
         np.testing.assert_array_equal(args[0], expected_signal)
 
 
-@pytest.mark.parametrize("num_channel",[1, 2, 4, 6, 8])
-def test_computing_spectrum(mock_spectrogram, num_channel) -> None:
+@pytest.mark.parametrize("num_channel", [1, 2, 4, 6, 8])
+def test_computing_spectrum(mock_spectrogram, num_channel, generate_signal) -> None:
     analyzer = SpectrogramAnalysis()
     signal, expected_freqs = generate_signal(num_channel=num_channel)
 
