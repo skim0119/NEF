@@ -15,7 +15,7 @@ class SpectrumAnalysisBase(GeneratorOperatorMixin):
 
     Attributes
     ----------
-    window_length_for_welch : int
+    window_size_for_welch : int
         The length of the window for Welch's method, defined as a multiple of the signal's sampling rate. Default is 4.
     band_display : Tuple[float, float]
         The frequency band range to display on the plot. Default is (0, 100) Hz.
@@ -23,16 +23,16 @@ class SpectrumAnalysisBase(GeneratorOperatorMixin):
         A string representing the tag used as the title of the plot. Default is "Base PSD Analysis".
     """
 
-    window_length_for_welch: int = 4
+    window_size_for_welch: int = 4
     tag: str = "Base PSD spectrum analysis"
 
     def __post_init__(self) -> None:
         super().__init__()
         if (
-            not isinstance(self.window_length_for_welch, int)
-            or self.window_length_for_welch <= 0
+            not isinstance(self.window_size_for_welch, int)
+            or self.window_size_for_welch <= 0
         ):
-            raise ValueError("window_length_for_welch must be a positive integer.")
+            raise ValueError("window_size_for_welch must be a positive integer.")
         self.chunk: int = 0
 
     @cache_generator_call
@@ -53,6 +53,9 @@ class SpectrumAnalysisBase(GeneratorOperatorMixin):
             - "freqs": A NumPy array of frequency values in Hz.
             - "psd": A NumPy array of PSD values.
         """
+        if signal.data.shape[0] <= self.window_size_for_welch:
+            raise ValueError("window_size_for_welch must be larger than data size")
+
         self.rate = signal.rate
         self.num_channel = signal.number_of_channels
 
@@ -81,7 +84,7 @@ class SpectrumAnalysisWelch(SpectrumAnalysisBase):
     tag: str = "Welch PSD spectrum analysis"
 
     def compute_psd(self, data: np.ndarray) -> tuple:
-        win = self.window_length_for_welch * self.rate
+        win = self.window_size_for_welch * self.rate
         psd_list: list = []
         for ch in range(self.num_channel):
             signal_no_bias = data[:, ch] - np.mean(data[:, ch])
