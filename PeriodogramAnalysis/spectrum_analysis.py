@@ -75,6 +75,10 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
         """
         freqs = input[0]
         psd = input[1]
+
+        if freqs is None or psd is None or len(freqs) == 0 or len(psd) == 0:
+            raise ValueError("Frequency and psd cannot be empty")
+
         self.chunk += 1
         self.num_channel = psd.shape[1]
 
@@ -139,13 +143,13 @@ class PowerSpectrumAnalysis(GeneratorOperatorMixin):
             Dictionary containing power values of each channel in this chunk.
         """
         absolute_powers = power[
-            (self.chunk * len(self.band_list)) : (
-                (self.chunk + 1) * len(self.band_list)
+            (self.chunk * len(self.band_list * self.num_channel)) : (
+                (self.chunk + 1) * len(self.band_list * self.num_channel)
             )
         ]
         relative_powers = rel_power[
-            (self.chunk * len(self.band_list)) : (
-                (self.chunk + 1) * len(self.band_list)
+            (self.chunk * len(self.band_list * self.num_channel)) : (
+                (self.chunk + 1) * len(self.band_list * self.num_channel)
             )
         ]
 

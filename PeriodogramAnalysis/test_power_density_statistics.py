@@ -98,7 +98,7 @@ def test_signal_first_channel(
 @pytest.mark.parametrize(
     "analysis_class", [SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram]
 )
-@pytest.mark.parametrize("num_channel", [1, 4, 7, 9])
+@pytest.mark.parametrize("num_channel", [2, 4, 7, 9])
 def test_signal_multiple_channel(initialize_module, analysis_class, num_channel):
     freqs, psd, _ = initialize_module(analysis_class, num_channel=num_channel)
     assert psd.shape[1] == num_channel
