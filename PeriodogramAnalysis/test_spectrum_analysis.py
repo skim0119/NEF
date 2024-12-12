@@ -35,6 +35,7 @@ def initialize_module():
 
 
 def test_call_invalid_input_parameters():
+    # Test improper input parameter
     with pytest.raises(ValueError):
         PowerSpectrumAnalysis(band_display=(5, 10, 20, 30))
     with pytest.raises(ValueError):
@@ -49,6 +50,7 @@ def test_call_invalid_input_parameters():
 
 
 def test_call_empty_input():
+    # Test empty input
     input = (np.array([]), np.array([]))
 
     with pytest.raises(ValueError):
@@ -65,6 +67,7 @@ Number of Frequency Points = (50 - 0) / Δf + 1 = 801
 
 
 def test_call_single_channel(initialize_module, num_channel=1):
+    # Test shape of output for a single channel signal
     freqs, psd, psd_idx = initialize_module(num_channel=num_channel)
 
     assert isinstance(freqs, np.ndarray)
@@ -78,6 +81,7 @@ def test_call_single_channel(initialize_module, num_channel=1):
 
 @pytest.mark.parametrize("num_channel", [2, 4, 7, 9])
 def test_call_multiple_channels(initialize_module, num_channel):
+    # Test shape of output for a multiple channel signal
     freqs, psd, psd_idx = initialize_module(num_channel=num_channel)
 
     assert psd.shape[1] == num_channel
@@ -86,6 +90,7 @@ def test_call_multiple_channels(initialize_module, num_channel):
 
 
 def test_call_empty_band_list(initialize_module, num_channel=1) -> None:
+    # Test when band_list is empty
     freqs, psd, psd_idx = initialize_module(num_channel=num_channel, band=())
     assert freqs.shape[0] == 801
     assert psd.shape[0] == 801
@@ -96,6 +101,7 @@ def test_call_empty_band_list(initialize_module, num_channel=1) -> None:
 def test_computing_absolute_and_relative_power_first_channel(
     initialize_module, mocker, num_channel=1
 ) -> None:
+    # Test function computing_absolute_and_relative_power works properly for a single channel signal
     analysis = PowerSpectrumAnalysis()
     freqs, psd, psd_idx = initialize_module(num_channel=num_channel)
 
@@ -113,8 +119,10 @@ def test_computing_absolute_and_relative_power_first_channel(
         computed_power = power[i]
         computed_rel_power = rel_power[i]
 
+        # Test power is as expected
         assert np.isclose(manual_power, computed_power)
 
+        # Test relative power is as expected
         manual_rel_power = manual_power / total_power
         assert np.isclose(manual_rel_power, computed_rel_power)
 
@@ -123,6 +131,7 @@ def test_computing_absolute_and_relative_power_first_channel(
 def test_computing_absolute_and_relative_power_multi_channel(
     initialize_module, mocker, num_channel
 ) -> None:
+    # Test function computing_absolute_and_relative_power works properly for a multiple channel signal
     analysis = PowerSpectrumAnalysis()
     freqs, psd, psd_idx = initialize_module(num_channel=num_channel)
 
@@ -137,7 +146,7 @@ def test_computing_absolute_and_relative_power_multi_channel(
 
 
 def test_band_out_of_frequency_range() -> None:
-    # Input frequency has max range 100 Hz, while band to be analysed is 200-250Hz
+    # Input frequency has max range 100 Hz, test while band to be analysed is more than that (200-250Hz)
     analysis = PowerSpectrumAnalysis(band_list=((200, 250),))
 
     freqs = np.linspace(0, 100, 1000)
@@ -176,6 +185,7 @@ def initiate_computing_ratio_and_bandpower(initialize_module):
 def test_computing_ratio_and_bandpower_first_channel(
     initiate_computing_ratio_and_bandpower, mocker, num_channel=1
 ) -> None:
+    # Test function computing_ratio_and_bandpower computes power properly for a single channel signal
     power, rel_power, absolute_powers, relative_powers, _ = (
         initiate_computing_ratio_and_bandpower(num_channel=num_channel, mocker=mocker)
     )
@@ -188,6 +198,7 @@ def test_computing_ratio_and_bandpower_first_channel(
 def test_computing_ratio_and_bandpower_multiple_channel(
     initiate_computing_ratio_and_bandpower, mocker, num_channel
 ) -> None:
+    # Test function computing_ratio_and_bandpower computes power properly for a multiple channel signal
     power, rel_power, absolute_powers, relative_powers, _ = (
         initiate_computing_ratio_and_bandpower(num_channel=num_channel, mocker=mocker)
     )
@@ -200,7 +211,8 @@ def test_computing_ratio_and_bandpower_multiple_channel(
 def test_computing_ratio_and_bandpower_logger_call(
     initiate_computing_ratio_and_bandpower, mocker, num_channel
 ) -> None:
-    _, _, _, _, mock_logger = initiate_computing_ratio_and_bandpower(
+    # Test function computing_ratio_and_bandpower call logger properly
+    *_, mock_logger = initiate_computing_ratio_and_bandpower(
         num_channel=num_channel, mocker=mocker
     )
     mock_logger.info.assert_called()

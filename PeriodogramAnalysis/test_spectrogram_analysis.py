@@ -5,10 +5,21 @@ import numpy as np
 from scipy.signal import spectrogram
 from miv.core.datatype import Signal
 from spectrogram_analysis import SpectrogramAnalysis
-from test_power_density_statistics import mock_signal_generator
+from test_power_density_statistics import generate_signal
 
+@pytest.fixture
+def initialize_spectrogram():
+    def module_init(num_channel):
+        analyzer = SpectrogramAnalysis()
+        signal, expected_freqs = generate_signal(num_channel=num_channel)
+        frequencies, times, sxx_list = analyzer(signal)
+
+        return frequencies, times, sxx_list, expected_freqs, signal
+
+    return module_init
 
 def test_call_invalid_input_parameters():
+    # Test improper input parameter
     with pytest.raises(ValueError):
         SpectrogramAnalysis(frequency_limit=(2, 1))
     with pytest.raises(ValueError):
@@ -27,49 +38,86 @@ def test_call_invalid_input_parameters():
         SpectrogramAnalysis(nperseg_ratio=0)
 
 
-def test_call_return_shape(mock_signal_generator):
-    analyzer = SpectrogramAnalysis(plotting_interval=(5, 60))
-    signal, _ = mock_signal_generator
-    result = analyzer(signal)
-    frequencies, times, sxx_list = result
+def test_none_input():
+    # Test empty input signal
+    with pytest.raises(Exception):
+        analyzer = SpectrogramAnalysis()
+        analyzer(None)
+
+
+def test_call_first_channel(initialize_spectrogram, num_channel = 1):
+    # Test shape of output for a single channel signal
+    frequencies, times, sxx_list, *rest = initialize_spectrogram(num_channel=num_channel)
+    """
+    nperseg_ratio = 0.25.
+    nperseg = int(100 * 0.25) = 25 points per segment.
+    noverlap = int(nperseg / 2):
+    noverlap = int(25 / 2) = 12.
+    frequencies.shape[0] = nperseg / 2 + 1 = 13
+    M= (signal_length−noverlap) / (nperseg−noverlap) = 988 / 13 = 76
+    """
 
     assert isinstance(frequencies, np.ndarray)
     assert isinstance(times, np.ndarray)
     assert frequencies.shape[0] == 13
     assert times.shape[0] == 76
-    assert sxx_list.shape == (2, frequencies.shape[0], times.shape[0])
+    assert sxx_list.shape == (1, frequencies.shape[0], times.shape[0])
 
 
-def test_computing_spectrum(mock_signal_generator, mocker) -> None:
-    power_analysis = SpectrogramAnalysis()
-    signal, _ = mock_signal_generator
+@pytest.mark.parametrize("num_channel",[2, 4, 6, 8])
+def test_call_multiple_channel(initialize_spectrogram, num_channel):
+    # Test shape of output for a multiple channel signal
+    frequencies, times, sxx_list, *rest = initialize_spectrogram(num_channel=num_channel)
+    assert sxx_list.shape == (num_channel, frequencies.shape[0], times.shape[0])
 
-    mock_spectrogram = mocker.patch("scipy.signal.spectrogram")
 
-    mock_spectrogram.return_value = (
-        np.random.rand(13),
-        np.random.rand(76),
-        np.random.rand(13, 76),
+@pytest.fixture
+def mock_spectrogram(mocker):
+    # Fixture to mock `scipy.signal.spectrogram`
+    mock = mocker.patch("scipy.signal.spectrogram")
+    mock.return_value = (
+        np.ones(13),
+        np.ones(76),
+        np.ones([13, 76]),
     )
+    return mock
 
-    frequencies, times, sxx_list = power_analysis(signal)
 
-    assert mock_spectrogram.call_count == 2
+@pytest.mark.parametrize("num_channel",[1, 2, 4, 6, 8])
+def test_computing_spectrum_computed_signal(mock_spectrogram, num_channel) -> None:
+    analyzer = SpectrogramAnalysis()
+    signal, expected_freqs = generate_signal(num_channel=num_channel)
 
+    analyzer(signal)
+    assert mock_spectrogram.call_count == num_channel
+
+    # Test input signal
     for ch, call in enumerate(mock_spectrogram.call_args_list):
         args, kwargs = call
 
         expected_signal = signal.data[:, ch] - np.mean(signal.data[:, ch])
         np.testing.assert_array_equal(args[0], expected_signal)
 
+
+@pytest.mark.parametrize("num_channel",[1, 2, 4, 6, 8])
+def test_computing_spectrum(mock_spectrogram, num_channel) -> None:
+    analyzer = SpectrogramAnalysis()
+    signal, expected_freqs = generate_signal(num_channel=num_channel)
+
+    frequencies, times, sxx_list = analyzer(signal)
+    assert mock_spectrogram.call_count == num_channel
+
+    for ch, call in enumerate(mock_spectrogram.call_args_list):
+        args, kwargs = call
+
         # Test if the function is called with proper parameters
         assert kwargs["fs"] == signal.rate
-        assert kwargs["nperseg"] == int(signal.rate * power_analysis.nperseg_ratio)
+        assert kwargs["nperseg"] == int(signal.rate * analyzer.nperseg_ratio)
         assert kwargs["noverlap"] == int(
-            (int(signal.rate * power_analysis.nperseg_ratio)) / 2
+            (int(signal.rate * analyzer.nperseg_ratio)) / 2
         )
 
-    # Test the return
+    # Test return values
     assert frequencies.shape == (13,)
     assert times.shape == (76,)
-    assert sxx_list.shape == (2, 13, 76)
+    assert sxx_list.shape == (num_channel, 13, 76)

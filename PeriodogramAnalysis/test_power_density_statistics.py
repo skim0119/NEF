@@ -8,27 +8,26 @@ from power_density_statistics import (
 )
 
 
-@pytest.fixture
-def initialize_module():
+def generate_signal(num_channel):
     expected_freqs = [5, 10, 15, 20]
-
-    def generate_signal(num_channel):
-        timestamps = np.linspace(0, 10, 1000, endpoint=False)
-        signal = (
+    timestamps = np.linspace(0, 10, 1000, endpoint=False)
+    signal = (
             np.sin(2 * np.pi * 5 * timestamps)
             + np.sin(2 * np.pi * 10 * timestamps)
             + np.sin(2 * np.pi * 15 * timestamps)
             + np.sin(2 * np.pi * 20 * timestamps)
-        )
-        np.random.seed(42)
-        noise = np.random.normal(loc=0, scale=0.5, size=signal.shape)
-        signal += noise
-        data = np.empty((0, len(signal)))
-        for ch in range(num_channel):
-            data = np.vstack((data, (ch + 2) * signal))
-        signal = Signal(data=data.T, timestamps=timestamps, rate=100)
-        return signal, expected_freqs
+    )
+    np.random.seed(42)
+    noise = np.random.normal(loc=0, scale=0.5, size=signal.shape)
+    signal += noise
+    data = np.empty((0, len(signal)))
+    for ch in range(num_channel):
+        data = np.vstack((data, (ch + 2) * signal))
+    signal = Signal(data=data.T, timestamps=timestamps, rate=100)
+    return signal, expected_freqs
 
+@pytest.fixture
+def initialize_module():
     def module_init(module_name, num_channel):
         analyzer = module_name(window_size_for_welch=4)
         signal, expected_freqs = generate_signal(num_channel=num_channel)
@@ -77,7 +76,6 @@ Length of freqs = nfft / 2 + 1 = 501
 More details is here: <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html>
 """
 
-
 @pytest.mark.parametrize(
     "analysis_class_and_shape",
     [(SpectrumAnalysisWelch, 801), (SpectrumAnalysisPeriodogram, 501)],
@@ -88,6 +86,7 @@ def test_signal_first_channel(
     analysis_class, expected_shape = analysis_class_and_shape
     freqs, psd, _ = initialize_module(analysis_class, num_channel=num_channel)
 
+    # Test output shape for a single channel signal
     assert isinstance(freqs, np.ndarray)
     assert isinstance(psd, np.ndarray)
 
@@ -100,6 +99,7 @@ def test_signal_first_channel(
 )
 @pytest.mark.parametrize("num_channel", [2, 4, 7, 9])
 def test_signal_multiple_channel(initialize_module, analysis_class, num_channel):
+    # Test multiple channel signal can be handled
     freqs, psd, _ = initialize_module(analysis_class, num_channel=num_channel)
     assert psd.shape[1] == num_channel
 
@@ -141,6 +141,7 @@ def test_spectrum_analysis_computation(analysis_class, initialize_module) -> Non
 )
 @pytest.mark.parametrize("rate", [50, 200, 500])
 def test_different_sampling_rates(analysis_class, rate):
+    # Test result satisfy Nyquist sampling law
     timestamps = np.linspace(0, 10, rate * 10, endpoint=False)
     signal_data = np.sin(2 * np.pi * 5 * timestamps)
     data = np.array([signal_data, signal_data]).T
@@ -161,6 +162,7 @@ def test_signal_shorter_than_window(analysis_class):
     data = np.array([signal_data, signal_data]).T
     signal = Signal(data=data, timestamps=timestamps, rate=100)
 
+    # Test when signal length is smaller than or equal to window length
     analyzer = analysis_class(window_size_for_welch=100)
     with pytest.raises(Exception):
         analyzer(signal)
