@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from abc import ABC, abstractmethod
 import scipy
 import numpy as np
 
@@ -9,7 +10,7 @@ from miv.core.datatype import Signal
 
 
 @dataclass
-class SpectrumAnalysisBase(GeneratorOperatorMixin):
+class SpectrumAnalysisBase(GeneratorOperatorMixin, ABC):
     """
     A base class for performing spectral analysis on signal data.
 
@@ -24,7 +25,6 @@ class SpectrumAnalysisBase(GeneratorOperatorMixin):
     """
 
     window_size_for_welch: int = 4
-    tag: str = "Base PSD spectrum analysis"
 
     def __post_init__(self) -> None:
         super().__init__()
@@ -63,16 +63,12 @@ class SpectrumAnalysisBase(GeneratorOperatorMixin):
 
         return freqs, psd
 
+    @abstractmethod
     def compute_psd(self, data: np.ndarray) -> tuple:
         """
-        compute_psd(signal: Signal) -> Dict[int, Dict[str, Any]]:
         Abstract method to be overridden in subclasses to compute the PSD for a given signal.
         """
-        raise NotImplementedError(
-            "The compute_psd method is not implemented in the base class. "
-            "This base class is not intended for standalone use. Please use a subclass "
-            "such as SpectrumAnalysisWelch, SpectrumAnalysisPeriodogram, or SpectrumAnalysisMultitaper."
-        )
+        pass
 
 
 @dataclass

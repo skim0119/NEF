@@ -41,7 +41,7 @@ def initialize_module():
 
 def test_call_invalid_input_parameters(initialize_module, num_channel=1):
     # Test wrong input parameters
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         initialize_module(SpectrumAnalysisBase, num_channel=num_channel)
 
     with pytest.raises(ValueError):
