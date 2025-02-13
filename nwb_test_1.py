@@ -62,11 +62,10 @@ with NWBHDF5IO(file_path, "r") as io:
     data = spike_series.data[:].T
     time = spike_series.timestamps[:]
 
-    plt.imshow(data, cmap="gray_r", extent=(time[0], time[-1], 1, data.shape[0]  ))
-    plt.gca().set_aspect('auto')
-    plt.xlim(time[0], time[0]+10)
+    plt.imshow(data, cmap="gray_r", extent=(time[0], time[-1], 1, data.shape[0]))
+    plt.gca().set_aspect("auto")
+    plt.xlim(time[0], time[0] + 10)
     plt.show()
-
 
     sys.exit()
 

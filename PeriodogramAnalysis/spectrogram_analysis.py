@@ -1,20 +1,22 @@
+from typing import Any, Optional
+
+import pathlib
 import os
+from dataclasses import dataclass
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import signal as sig
-from dataclasses import dataclass, field
+import scipy
 from collections import defaultdict
-from typing import List, Tuple, Dict, Any, Generator, Optional
 
-from miv.core.operator.operator import OperatorMixin
-from miv.core.operator.wrapper import cache_call
+from miv.core.operator_generator.operator import GeneratorOperatorMixin
+from miv.core.operator_generator.wrapper import cache_generator_call
 from miv.core.datatype import Signal
 from miv.typing import SignalType
 
 
 @dataclass
-class SpectrogramAnalysis(OperatorMixin):
+class SpectrogramAnalysis(GeneratorOperatorMixin):
     """
     A class to perform Spectrum Analysis using multiple methods including Welch's, Periodogram, and multitaper PSD.
 
@@ -22,22 +24,41 @@ class SpectrogramAnalysis(OperatorMixin):
     -----------
     frequency_limit : list
         Frequency range limit for analysis.
-    nperseg : int
-        Number of points per segment for spectrogram computation.
-    noverlap : int
-        Number of points to overlap between segments for spectrogram.
+    nperseg_ratio : float
+        Specifies the ratio of the number of points per segment (`nperseg`) to the sampling rate.
     """
 
-    frequency_limit: Tuple[float, float] = (0.5, 100)
-    plotting_interval: Tuple[float, float] = (0, 60)
+    frequency_limit: tuple[float, float] = (0.5, 100)
+    plotting_interval: tuple[float, float] = (0, 60)
     nperseg_ratio: float = 0.25
     tag = "Spectrogram Analysis"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__init__()
+        if not len(self.frequency_limit) == 2:
+            raise ValueError("frequency_limit must be a tuple with two values.")
+        if self.frequency_limit[0] >= self.frequency_limit[1]:
+            raise ValueError("frequency_limit[0] must be less than frequency_limit[1].")
 
-    @cache_call
-    def __call__(self, signal: SignalType) -> Dict[int, Dict[int, Dict[str, Any]]]:
+        if not len(self.plotting_interval) == 2:
+            raise ValueError("plotting_interval must be a tuple with two values.")
+        if self.plotting_interval[0] < 0 or self.plotting_interval[1] > 60:
+            raise ValueError(
+                "plotting_interval values must be within the range [0, 60]."
+            )
+        if self.plotting_interval[0] >= self.plotting_interval[1]:
+            raise ValueError(
+                "plotting_interval[0] must be less than plotting_interval[1]."
+            )
+
+        if not self.nperseg_ratio > 0:
+            raise ValueError("nperseg_ratio must be a positive number.")
+
+        self.num_channel: int = 0
+        self.chunk: int = -1
+
+    @cache_generator_call
+    def __call__(self, signal: Signal) -> tuple:
         """
         Perform spectrum analysis on the given signal.
 
@@ -51,31 +72,36 @@ class SpectrogramAnalysis(OperatorMixin):
         spec_dict
             spectrum dictionary
         """
-        spec_dict: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(dict)
+        self.rate = signal.rate
+        self.num_channel = signal.number_of_channels
+        self.chunk += 1
 
-        for chunk_index, signal_piece in enumerate(signal):
-            spec_dict[chunk_index] = self.computing_spectrum(signal_piece)
+        return self.computing_spectrum(signal.data)
 
-        return spec_dict
+    def computing_spectrum(self, data: np.ndarray) -> tuple:
 
-    def computing_spectrum(self, signal: Signal) -> Dict[int, Dict[str, Any]]:
-        spec_dict: Dict[int, Dict[str, Any]] = defaultdict(dict)
-
-        nperseg = int(signal.rate * self.nperseg_ratio)
+        nperseg = int(self.rate * self.nperseg_ratio)
         noverlap = int(nperseg / 2)
-        for channel in range(signal.number_of_channels):
-            signal_no_bias = signal.data[:, channel] - np.mean(signal.data[:, channel])
-            frequencies, times, Sxx = sig.spectrogram(
-                signal_no_bias, fs=signal.rate, nperseg=nperseg, noverlap=noverlap
-            )
-            spec_dict[channel] = {
-                "frequencies": frequencies,
-                "times": times,
-                "Sxx": Sxx,
-            }
-        return spec_dict
 
-    def plot_spectrogram(self, output, input, show=False, save_path=None):
+        sxx_list: list = []
+
+        for ch in range(self.num_channel):
+            signal_no_bias = data[:, ch] - np.mean(data[:, ch])
+            frequencies, times, sxx = scipy.signal.spectrogram(
+                signal_no_bias, fs=self.rate, nperseg=nperseg, noverlap=noverlap
+            )
+
+            sxx_list.append(sxx)
+
+        return frequencies, times, np.array(sxx_list)
+
+    def plot_spectrogram(
+        self,
+        output: tuple,
+        input: None,
+        show: bool = False,
+        save_path: Optional[pathlib.Path] = None,
+    ) -> None:
         """
         Plot spectrogram of the signal for given chunks and channels.
 
@@ -88,22 +114,19 @@ class SpectrogramAnalysis(OperatorMixin):
         save_path : str, optional (default=None)
             If provided, the spectrogram plot will be saved to the given path with filenames indicating the chunk and channel.
         """
-        spec_dict = output
+        for frequencies, times, sxx in output:
+            for channel in range(self.num_channel):
+                if save_path is not None:
+                    channel_folder = os.path.join(save_path, f"channel{channel:03d}")
+                    os.makedirs(channel_folder, exist_ok=True)
 
-        for chunk in spec_dict.keys():
-            for channel in spec_dict[chunk].keys():
-
-                spectrogram_data = spec_dict[chunk][channel]
-                frequencies = spectrogram_data["frequencies"]
-                times = spectrogram_data["times"]
-                Sxx = spectrogram_data["Sxx"]
-                Sxx = np.maximum(Sxx, 1e-2)
-                Sxx_log = 10 * np.log10(Sxx)
+                sxx_channel = np.maximum(sxx[channel, :, :], 1e-2)
+                sxx_log = 10 * np.log10(sxx_channel)
 
                 fig, ax = plt.subplots(2, 1, figsize=(14, 12))
 
                 cax1 = ax[0].pcolormesh(
-                    times, frequencies, Sxx_log, shading="gouraud", cmap="inferno"
+                    times, frequencies, sxx_log, shading="gouraud", cmap="inferno"
                 )
                 ax[0].set_title("Spectrogram")
                 ax[0].set_xlabel("Time (s)")
@@ -120,7 +143,7 @@ class SpectrogramAnalysis(OperatorMixin):
                     )
 
                 cax2 = ax[1].pcolormesh(
-                    times, frequencies, Sxx_log, shading="gouraud", cmap="inferno"
+                    times, frequencies, sxx_log, shading="gouraud", cmap="inferno"
                 )
                 ax[1].set_xlabel("Time (s)")
                 ax[1].set_ylabel("Frequency (Hz)")
@@ -155,7 +178,7 @@ class SpectrogramAnalysis(OperatorMixin):
                     plt.show()
                 if save_path is not None:
                     plot_path = os.path.join(
-                        save_path, f"Chunk{chunk}_Spectrogram_Channel_{channel}.png"
+                        channel_folder, f"spectrogram_{self.chunk:03d}.png"
                     )
                     plt.savefig(plot_path, dpi=300)
-                plt.close()
+                plt.close("all")
